@@ -1,0 +1,4 @@
+fastapi>=0.115
+uvicorn[standard]>=0.30
+# SkillSpector itself is installed separately from the sibling SkillSpector tree:
+#   pip install ../SkillSpector

@@ -1,0 +1,53 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: skilldetect-server
+  datasource:
+    url: jdbc:postgresql://localhost:5432/skilldetect
+    username: skilldetect
+    password: skilldetect
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: false
+  data:
+    redis:
+      host: localhost
+      port: 6379
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+
+scan:
+  risk-threshold: 50
+  concurrency:
+    max-active: 8
+  engine:
+    base-url: http://localhost:8000
+    timeout-seconds: 720
+    circuit-failure-threshold: 5
+    circuit-open-seconds: 60
+  storage:
+    base-dir: /data
+  retention-days: 30
+
+security:
+  enabled: false
+
+rate-limit:
+  enabled: true
+  window-seconds: 60
+  hmi-requests-per-minute: 120
+  m2m-requests-per-minute: 60

@@ -1,0 +1,79 @@
+services:
+  engine:
+    build:
+      context: .
+      dockerfile: skillspector-engine/Dockerfile
+    image: skillspector-engine:local
+    environment:
+      SKILLSPECTOR_PROVIDER: openai
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      SKILLSPECTOR_MODEL: ${SKILLSPECTOR_MODEL:-}
+      ENGINE_MAX_CONCURRENT_SCANS: 8
+    volumes:
+      - skill-data:/data
+    ports:
+      - "8000:8000"
+
+  server:
+    build:
+      context: ./SkillDetectServer
+      dockerfile: Dockerfile
+    image: skilldetect-server:local
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/skilldetect
+      SPRING_DATASOURCE_USERNAME: skilldetect
+      SPRING_DATASOURCE_PASSWORD: skilldetect
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SCAN_ENGINE_BASE_URL: http://engine:8000
+      SCAN_ENGINE_TIMEOUT_SECONDS: 720
+      SCAN_STORAGE_BASE_DIR: /data
+      SCAN_CONCURRENCY_MAX_ACTIVE: 8
+      SCAN_RISK_THRESHOLD: 50
+      SECURITY_ENABLED: false
+    volumes:
+      - skill-data:/data
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      engine:
+        condition: service_started
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: skilldetect
+      POSTGRES_USER: skilldetect
+      POSTGRES_PASSWORD: skilldetect
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U skilldetect -d skilldetect"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+volumes:
+  skill-data:
+  pg-data:
+  redis-data:

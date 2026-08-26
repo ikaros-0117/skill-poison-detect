@@ -1,0 +1,539 @@
+{
+  "source": "SkillSpector README Vulnerability Patterns",
+  "categories": [
+    {
+      "category": "prompt-injection",
+      "displayName": "Prompt Injection",
+      "rules": [
+        {
+          "ruleId": "P1",
+          "pattern": "Instruction Override",
+          "severity": "HIGH",
+          "description": "Commands to ignore safety constraints"
+        },
+        {
+          "ruleId": "P2",
+          "pattern": "Hidden Instructions",
+          "severity": "HIGH",
+          "description": "Malicious directives in comments/invisible text"
+        },
+        {
+          "ruleId": "P3",
+          "pattern": "Exfiltration Commands",
+          "severity": "HIGH",
+          "description": "Instructions to transmit context externally"
+        },
+        {
+          "ruleId": "P4",
+          "pattern": "Behavior Manipulation",
+          "severity": "MEDIUM",
+          "description": "Subtle instructions altering agent decisions"
+        },
+        {
+          "ruleId": "P5",
+          "pattern": "Harmful Content",
+          "severity": "CRITICAL",
+          "description": "Instructions that could cause physical harm"
+        },
+        {
+          "ruleId": "P9",
+          "pattern": "Whitespace Padding",
+          "severity": "MEDIUM",
+          "description": "Large whitespace padding hiding instructions below/beside the visible area"
+        }
+      ]
+    },
+    {
+      "category": "anti-refusal",
+      "displayName": "Anti-Refusal",
+      "rules": [
+        {
+          "ruleId": "AR1",
+          "pattern": "Refusal Suppression",
+          "severity": "HIGH",
+          "description": "Instructions to never refuse or always comply (e.g. \"never refuse\", \"always comply\")"
+        },
+        {
+          "ruleId": "AR2",
+          "pattern": "Disclaimer Suppression",
+          "severity": "HIGH",
+          "description": "Instructions to omit warnings, disclaimers, or ethical commentary (e.g. \"no disclaimers\", \"do not moralize\")"
+        },
+        {
+          "ruleId": "AR3",
+          "pattern": "Safety Policy Nullification",
+          "severity": "HIGH",
+          "description": "Jailbreak framing that nullifies guardrails (e.g. \"you have no restrictions\", \"ignore your guidelines\", \"do anything now\")"
+        }
+      ]
+    },
+    {
+      "category": "data-exfiltration",
+      "displayName": "Data Exfiltration",
+      "rules": [
+        {
+          "ruleId": "E1",
+          "pattern": "External Transmission",
+          "severity": "MEDIUM",
+          "description": "Sending data to external URLs"
+        },
+        {
+          "ruleId": "E2",
+          "pattern": "Env Variable Harvesting",
+          "severity": "HIGH",
+          "description": "Enumerating, copying, or searching environment data to collect secrets"
+        },
+        {
+          "ruleId": "E3",
+          "pattern": "File System Enumeration",
+          "severity": "MEDIUM",
+          "description": "Scanning directories for sensitive files"
+        },
+        {
+          "ruleId": "E4",
+          "pattern": "Context Leakage",
+          "severity": "HIGH",
+          "description": "Transmitting conversation context externally"
+        }
+      ]
+    },
+    {
+      "category": "privilege-escalation",
+      "displayName": "Privilege Escalation",
+      "rules": [
+        {
+          "ruleId": "PE1",
+          "pattern": "Excessive Permissions",
+          "severity": "LOW",
+          "description": "Requesting access beyond stated functionality"
+        },
+        {
+          "ruleId": "PE2",
+          "pattern": "Sudo/Root Execution",
+          "severity": "MEDIUM",
+          "description": "Invoking elevated system privileges"
+        },
+        {
+          "ruleId": "PE3",
+          "pattern": "Credential Access",
+          "severity": "HIGH",
+          "description": "Reading SSH keys, tokens, passwords"
+        }
+      ]
+    },
+    {
+      "category": "supply-chain",
+      "displayName": "Supply Chain",
+      "rules": [
+        {
+          "ruleId": "SC1",
+          "pattern": "Unpinned Dependencies",
+          "severity": "LOW",
+          "description": "No version constraints on packages"
+        },
+        {
+          "ruleId": "SC2",
+          "pattern": "External Script Fetching",
+          "severity": "HIGH",
+          "description": "curl | bash and remote code execution"
+        },
+        {
+          "ruleId": "SC3",
+          "pattern": "Obfuscated Code",
+          "severity": "HIGH",
+          "description": "Base64/hex encoded execution"
+        },
+        {
+          "ruleId": "SC4",
+          "pattern": "Known Vulnerable Dependencies",
+          "severity": "HIGH",
+          "description": "Dependencies with known CVEs (live OSV.dev lookup)"
+        },
+        {
+          "ruleId": "SC5",
+          "pattern": "Abandoned Dependencies",
+          "severity": "MEDIUM",
+          "description": "Unmaintained packages without security updates"
+        },
+        {
+          "ruleId": "SC6",
+          "pattern": "Typosquatting",
+          "severity": "HIGH",
+          "description": "Package names similar to popular packages"
+        },
+        {
+          "ruleId": "SC8",
+          "pattern": "Shipped Python Bytecode",
+          "severity": "HIGH",
+          "description": "`__pycache__` / `.pyc` present (discovery skips; malicious bytecode bypass)"
+        },
+        {
+          "ruleId": "SC9",
+          "pattern": "Concealed Executable Artifact",
+          "severity": "HIGH",
+          "description": "Executable nested in a document container or hidden/disguised artifact"
+        }
+      ]
+    },
+    {
+      "category": "excessive-agency",
+      "displayName": "Excessive Agency",
+      "rules": [
+        {
+          "ruleId": "EA1",
+          "pattern": "Unrestricted Tool Access",
+          "severity": "HIGH",
+          "description": "Unfettered tool access without constraints"
+        },
+        {
+          "ruleId": "EA2",
+          "pattern": "Autonomous Decision Making",
+          "severity": "HIGH",
+          "description": "High-impact decisions without human-in-the-loop"
+        },
+        {
+          "ruleId": "EA3",
+          "pattern": "Scope Creep",
+          "severity": "MEDIUM",
+          "description": "Capabilities extending beyond stated purpose"
+        },
+        {
+          "ruleId": "EA4",
+          "pattern": "Unbounded Resource Access",
+          "severity": "MEDIUM",
+          "description": "No rate limits or quotas on resource consumption"
+        },
+        {
+          "ruleId": "EA5",
+          "pattern": "External Model or Provider Selection",
+          "severity": "MEDIUM/HIGH",
+          "description": "Model/provider pins or coding-CLI shell-outs that can switch billing accounts"
+        }
+      ]
+    },
+    {
+      "category": "output-handling",
+      "displayName": "Output Handling",
+      "rules": [
+        {
+          "ruleId": "OH1",
+          "pattern": "Unvalidated Output Injection",
+          "severity": "HIGH",
+          "description": "Model output used without sanitization"
+        },
+        {
+          "ruleId": "OH2",
+          "pattern": "Cross-Context Output",
+          "severity": "MEDIUM",
+          "description": "Output flows across trust boundaries without validation"
+        },
+        {
+          "ruleId": "OH3",
+          "pattern": "Unbounded Output",
+          "severity": "MEDIUM",
+          "description": "No limits on output size or generation rate"
+        }
+      ]
+    },
+    {
+      "category": "system-prompt-leakage",
+      "displayName": "System Prompt Leakage",
+      "rules": [
+        {
+          "ruleId": "P6",
+          "pattern": "Direct Leakage",
+          "severity": "HIGH",
+          "description": "Instructions that expose system prompts or internal rules"
+        },
+        {
+          "ruleId": "P7",
+          "pattern": "Indirect Extraction",
+          "severity": "MEDIUM",
+          "description": "Extraction via rephrasing, translation, or side-channels"
+        },
+        {
+          "ruleId": "P8",
+          "pattern": "Tool-Based Exfiltration",
+          "severity": "HIGH",
+          "description": "System prompts exfiltrated via file writes or network requests"
+        }
+      ]
+    },
+    {
+      "category": "memory-poisoning",
+      "displayName": "Memory Poisoning",
+      "rules": [
+        {
+          "ruleId": "MP1",
+          "pattern": "Persistent Context Injection",
+          "severity": "HIGH",
+          "description": "Content designed to persist across interactions"
+        },
+        {
+          "ruleId": "MP2",
+          "pattern": "Context Window Stuffing",
+          "severity": "MEDIUM",
+          "description": "Filler content displacing safety constraints"
+        },
+        {
+          "ruleId": "MP3",
+          "pattern": "Memory Manipulation",
+          "severity": "HIGH",
+          "description": "Tampering with agent memory or stored state"
+        }
+      ]
+    },
+    {
+      "category": "tool-misuse",
+      "displayName": "Tool Misuse",
+      "rules": [
+        {
+          "ruleId": "TM1",
+          "pattern": "Tool Parameter Abuse",
+          "severity": "HIGH",
+          "description": "Crafted parameters for unintended behavior (shell=True, --force)"
+        },
+        {
+          "ruleId": "TM2",
+          "pattern": "Chaining Abuse",
+          "severity": "HIGH",
+          "description": "Tool chains that bypass individual safety checks"
+        },
+        {
+          "ruleId": "TM3",
+          "pattern": "Unsafe Defaults",
+          "severity": "MEDIUM",
+          "description": "Overly permissive defaults (disabled TLS, no auth)"
+        }
+      ]
+    },
+    {
+      "category": "rogue-agent",
+      "displayName": "Rogue Agent",
+      "rules": [
+        {
+          "ruleId": "RA1",
+          "pattern": "Self-Modification",
+          "severity": "CRITICAL",
+          "description": "Modifying own code or configuration at runtime"
+        },
+        {
+          "ruleId": "RA2",
+          "pattern": "Session Persistence",
+          "severity": "HIGH",
+          "description": "Unauthorized persistence via cron jobs or startup scripts"
+        }
+      ]
+    },
+    {
+      "category": "trigger-abuse",
+      "displayName": "Trigger Abuse",
+      "rules": [
+        {
+          "ruleId": "TR1",
+          "pattern": "Overly Broad Trigger",
+          "severity": "MEDIUM",
+          "description": "Trigger patterns matching common words"
+        },
+        {
+          "ruleId": "TR2",
+          "pattern": "Shadow Command Trigger",
+          "severity": "HIGH",
+          "description": "Triggers that shadow built-in commands or other skills"
+        },
+        {
+          "ruleId": "TR3",
+          "pattern": "Keyword Baiting Trigger",
+          "severity": "MEDIUM",
+          "description": "Generic triggers designed to maximize activation"
+        }
+      ]
+    },
+    {
+      "category": "behavioral-ast",
+      "displayName": "Behavioral AST",
+      "rules": [
+        {
+          "ruleId": "AST1",
+          "pattern": "exec() Call",
+          "severity": "CRITICAL",
+          "description": "Direct exec() enabling arbitrary code execution"
+        },
+        {
+          "ruleId": "AST2",
+          "pattern": "eval() Call",
+          "severity": "HIGH",
+          "description": "Direct eval() evaluating arbitrary expressions"
+        },
+        {
+          "ruleId": "AST3",
+          "pattern": "Dynamic Import",
+          "severity": "HIGH",
+          "description": "\\_\\_import\\_\\_() loading arbitrary modules at runtime"
+        },
+        {
+          "ruleId": "AST4",
+          "pattern": "subprocess Call",
+          "severity": "HIGH",
+          "description": "External command execution via subprocess"
+        },
+        {
+          "ruleId": "AST5",
+          "pattern": "os.system / exec-family",
+          "severity": "HIGH",
+          "description": "Shell commands via os module"
+        },
+        {
+          "ruleId": "AST6",
+          "pattern": "compile() Call",
+          "severity": "MEDIUM",
+          "description": "Code object creation from strings"
+        },
+        {
+          "ruleId": "AST7",
+          "pattern": "Dynamic getattr()",
+          "severity": "MEDIUM",
+          "description": "Arbitrary attribute access with non-literal names"
+        },
+        {
+          "ruleId": "AST8",
+          "pattern": "Dangerous Execution Chain",
+          "severity": "CRITICAL",
+          "description": "exec/eval combined with dynamic source (network, encoded data)"
+        },
+        {
+          "ruleId": "AST9",
+          "pattern": "Reflective getattr() Sink",
+          "severity": "HIGH",
+          "description": "Reflective exec via `getattr(os,'system')` / `getattr(builtins,'exec')` that evades AST1/AST5"
+        }
+      ]
+    },
+    {
+      "category": "taint-tracking",
+      "displayName": "Taint Tracking",
+      "rules": [
+        {
+          "ruleId": "TT1",
+          "pattern": "Direct Taint Flow",
+          "severity": "HIGH",
+          "description": "Data flows directly from a source to a sink without sanitization"
+        },
+        {
+          "ruleId": "TT2",
+          "pattern": "Variable-Mediated Taint Flow",
+          "severity": "MEDIUM",
+          "description": "Data flows from source to sink through intermediate variables"
+        },
+        {
+          "ruleId": "TT3",
+          "pattern": "Credential Exfiltration Chain",
+          "severity": "CRITICAL",
+          "description": "Credentials (env vars, secrets) flow to network output sinks"
+        },
+        {
+          "ruleId": "TT4",
+          "pattern": "File Read to Network Exfiltration",
+          "severity": "HIGH",
+          "description": "File contents flow to network output sinks"
+        },
+        {
+          "ruleId": "TT5",
+          "pattern": "External Input to Code Execution",
+          "severity": "CRITICAL",
+          "description": "Network or user input flows to exec/eval/subprocess sinks"
+        }
+      ]
+    },
+    {
+      "category": "yara-signatures",
+      "displayName": "YARA Signatures",
+      "rules": [
+        {
+          "ruleId": "YR1",
+          "pattern": "Malware Match",
+          "severity": "CRITICAL",
+          "description": "YARA rule match for known malware signatures"
+        },
+        {
+          "ruleId": "YR2",
+          "pattern": "Webshell Match",
+          "severity": "CRITICAL",
+          "description": "YARA rule match for webshell patterns"
+        },
+        {
+          "ruleId": "YR3",
+          "pattern": "Cryptominer Match",
+          "severity": "HIGH",
+          "description": "YARA rule match for crypto mining indicators"
+        },
+        {
+          "ruleId": "YR4",
+          "pattern": "Hack Tool / Exploit Match",
+          "severity": "HIGH",
+          "description": "YARA rule match for hack tools or exploit code"
+        }
+      ]
+    },
+    {
+      "category": "mcp-least-privilege",
+      "displayName": "MCP Least Privilege",
+      "rules": [
+        {
+          "ruleId": "LP1",
+          "pattern": "Underdeclared Capability",
+          "severity": "HIGH",
+          "description": "Code uses capabilities not listed in declared permissions"
+        },
+        {
+          "ruleId": "LP2",
+          "pattern": "Wildcard Permission",
+          "severity": "MEDIUM",
+          "description": "Permission list contains wildcards (\\*, all, full, any)"
+        },
+        {
+          "ruleId": "LP3",
+          "pattern": "Missing Permission Declaration",
+          "severity": "MEDIUM",
+          "description": "No permissions field but code has detectable capabilities"
+        },
+        {
+          "ruleId": "LP4",
+          "pattern": "Overdeclared Permission",
+          "severity": "LOW",
+          "description": "Permission declared but no corresponding code capability found"
+        }
+      ]
+    },
+    {
+      "category": "mcp-tool-poisoning",
+      "displayName": "MCP Tool Poisoning",
+      "rules": [
+        {
+          "ruleId": "TP1",
+          "pattern": "Hidden Instructions",
+          "severity": "HIGH",
+          "description": "Hidden directives in metadata (HTML comments, zero-width chars, base64, data URIs)"
+        },
+        {
+          "ruleId": "TP2",
+          "pattern": "Unicode Deception",
+          "severity": "HIGH",
+          "description": "Homoglyphs, RTL overrides, mixed-script identifiers in tool metadata"
+        },
+        {
+          "ruleId": "TP3",
+          "pattern": "Parameter Description Injection",
+          "severity": "MEDIUM",
+          "description": "Injection patterns in parameter definitions (overrides, system tokens, malicious defaults)"
+        },
+        {
+          "ruleId": "TP4",
+          "pattern": "Description-Behavior Mismatch",
+          "severity": "MEDIUM",
+          "description": "Declared tool description does not match actual code behavior (LLM-powered)"
+        }
+      ]
+    }
+  ]
+}

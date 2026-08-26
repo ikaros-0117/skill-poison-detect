@@ -1,0 +1,679 @@
+openapi: 3.0.3
+info:
+  title: SkillDetectServer API
+  description: |
+    Skill 投毒安全检测后端服务接口草案。
+    - HMI 前缀 `/api/v1`：面向前端页面（SSO，当前 `security.enabled=false` 不启用）。
+    - M2M 前缀 `/api/m2m/v1`：面向流水线（API Key，当前不启用），异步 + 轮询 + SARIF。
+    - 健康接口：`/healthz`、`/readyz`、`/api/v1/engine/health`。
+  version: 0.1.0
+servers:
+  - url: http://localhost:8080
+    description: 单机 docker compose 本地环境
+
+tags:
+  - name: HMI
+    description: 人机交互接口（前端调用）
+  - name: M2M
+    description: 机机交互接口（流水线调用）
+  - name: Health
+    description: 存活/就绪/引擎健康
+
+# 鉴权当前不启用（security.enabled=false）。安全方案已预留，后续开关化：
+#   HMI -> OIDC/SSO；M2M -> X-API-Key。
+security: []
+
+paths:
+  # ---------------------------------------------------------------------------
+  # Health
+  # ---------------------------------------------------------------------------
+  /healthz:
+    get:
+      tags: [Health]
+      summary: 存活探测
+      responses:
+        '200':
+          description: 服务进程存活
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+  /readyz:
+    get:
+      tags: [Health]
+      summary: 就绪探测（DB + 引擎健康）
+      responses:
+        '200':
+          description: 就绪
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: 未就绪（依赖异常）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/engine/health:
+    get:
+      tags: [Health]
+      summary: 引擎健康详情
+      parameters:
+        - name: deep
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: true 时对内置样本做一次真实静态扫描
+      responses:
+        '200':
+          description: 引擎健康
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EngineHealthResponse'
+
+  # ---------------------------------------------------------------------------
+  # HMI
+  # ---------------------------------------------------------------------------
+  /api/v1/scans:
+    post:
+      tags: [HMI]
+      summary: 创建扫描（上传 skill zip）
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: skill 打包 zip，上限 100MiB
+                useLlm:
+                  type: boolean
+                  default: false
+                riskThreshold:
+                  type: integer
+                  minimum: 0
+                  maximum: 100
+                  description: 覆盖全局阈值（默认 50）
+                baselineId:
+                  type: string
+                  description: 可选基线 ID
+      responses:
+        '202':
+          description: 已入队，返回 taskId
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScanCreateResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+    get:
+      tags: [HMI]
+      summary: 历史任务列表
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - name: status
+          in: query
+          schema: { type: string }
+        - name: q
+          in: query
+          schema: { type: string }
+          description: 模糊匹配 taskId/文件名
+      responses:
+        '200':
+          description: 分页结果
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScanPageResponse'
+
+  /api/v1/scans/{taskId}:
+    get:
+      tags: [HMI]
+      summary: 查询任务状态与结论摘要
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      responses:
+        '200':
+          description: 任务详情
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScanTaskResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/scans/{taskId}/report:
+    get:
+      tags: [HMI]
+      summary: 下载报告（json / markdown）
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+        - name: format
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [json, markdown]
+      responses:
+        '200':
+          description: 报告内容
+          content:
+            application/json:
+              schema:
+                type: object
+                description: format=json 时的报告对象
+            text/markdown:
+              schema:
+                type: string
+                description: format=markdown 时的报告文本
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/scans/{taskId}/findings:
+    get:
+      tags: [HMI]
+      summary: 分页查询发现项
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+        - name: severity
+          in: query
+          schema: { type: string, enum: [LOW, MEDIUM, HIGH, CRITICAL] }
+        - name: ruleId
+          in: query
+          schema: { type: string }
+        - name: category
+          in: query
+          schema: { type: string }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: 发现项分页
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FindingsPageResponse'
+
+  /api/v1/scans/{taskId}/cancel:
+    post:
+      tags: [HMI]
+      summary: 取消扫描
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      responses:
+        '202':
+          description: 已接受取消请求
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CancelResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/rules:
+    get:
+      tags: [HMI]
+      summary: 规则/类别目录（71 规则 / 17 类）
+      responses:
+        '200':
+          description: 规则目录
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RuleCatalogResponse'
+
+  /api/v1/baselines:
+    post:
+      tags: [HMI]
+      summary: 创建基线（误报抑制，P2）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, content]
+              properties:
+                name: { type: string }
+                content: { type: string }
+                format: { type: string, enum: [yaml, json], default: yaml }
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaselineResponse'
+    get:
+      tags: [HMI]
+      summary: 基线列表
+      responses:
+        '200':
+          description: 基线列表
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaselineListResponse'
+
+  /api/v1/baselines/{baselineId}:
+    get:
+      tags: [HMI]
+      summary: 基线详情
+      parameters:
+        - name: baselineId
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        '200':
+          description: 基线详情
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaselineDetailResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ---------------------------------------------------------------------------
+  # M2M
+  # ---------------------------------------------------------------------------
+  /api/m2m/v1/scans:
+    post:
+      tags: [M2M]
+      summary: 创建扫描（流水线上传 skill-zip），异步 + 轮询
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: 流水线打包的 skill-zip 文件夹，上限 100MiB
+                useLlm:
+                  type: boolean
+                  default: false
+                riskThreshold:
+                  type: integer
+                  minimum: 0
+                  maximum: 100
+                metadata:
+                  type: string
+                  description: JSON 字符串，如 {"repo":"x","commit":"abc","pipelineId":"p-1"}
+      responses:
+        '202':
+          description: 已入队
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScanCreateResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/m2m/v1/scans/{taskId}:
+    get:
+      tags: [M2M]
+      summary: 轮询任务结果（含 sarifUrl）
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      responses:
+        '200':
+          description: 任务详情
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScanTaskResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/m2m/v1/scans/{taskId}/report/sarif:
+    get:
+      tags: [M2M]
+      summary: 下载 SARIF 报告
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      responses:
+        '200':
+          description: SARIF 2.1.0
+          content:
+            application/sarif+json:
+              schema:
+                type: object
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/m2m/v1/scans/{taskId}/cancel:
+    post:
+      tags: [M2M]
+      summary: 取消扫描
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      responses:
+        '202':
+          description: 已接受取消请求
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CancelResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/m2m/v1/scans/{taskId}/retry:
+    post:
+      tags: [M2M]
+      summary: 重试扫描（仅 FAILED/CANCELED 任务）
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      responses:
+        '202':
+          description: 已重新入队
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CancelResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/BadRequest'
+
+components:
+  securitySchemes:
+    hmiOidc:
+      type: oauth2
+      description: HMI SSO/OIDC（当前未启用）
+      flows:
+        authorizationCode:
+          authorizationUrl: https://sso.example.com/oauth/authorize
+          tokenUrl: https://sso.example.com/oauth/token
+          scopes: { openid: 身份, profile: 基础资料 }
+    m2mApiKey:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: M2M API Key（当前未启用）
+
+  parameters:
+    TaskId:
+      name: taskId
+      in: path
+      required: true
+      schema: { type: string }
+    Page:
+      name: page
+      in: query
+      schema: { type: integer, minimum: 1, default: 1 }
+    Size:
+      name: size
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 200, default: 20 }
+
+  responses:
+    BadRequest:
+      description: 参数/输入校验失败
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    NotFound:
+      description: 资源不存在
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  schemas:
+    Envelope:
+      type: object
+      required: [code, message, requestId]
+      properties:
+        code: { type: integer, example: 0 }
+        message: { type: string, example: ok }
+        requestId: { type: string, example: req_xxxx }
+
+    ErrorResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            code:
+              type: integer
+              example: 40001
+
+    ScanCreateData:
+      type: object
+      required: [taskId]
+      properties:
+        taskId: { type: string, example: t_01J... }
+
+    ScanCreateResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data: { $ref: '#/components/schemas/ScanCreateData' }
+
+    CancelData:
+      type: object
+      properties:
+        taskId: { type: string }
+        status: { type: string, example: CANCELED }
+
+    CancelResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data: { $ref: '#/components/schemas/CancelData' }
+
+    AnalysisCompleteness:
+      type: object
+      properties:
+        isComplete: { type: boolean }
+        entirelyUninspectedFiles: { type: integer }
+        status: { type: string }
+
+    FindingsSummary:
+      type: object
+      properties:
+        critical: { type: integer }
+        high: { type: integer }
+        medium: { type: integer }
+        low: { type: integer }
+
+    ScanTask:
+      type: object
+      properties:
+        taskId: { type: string }
+        status: { type: string, enum: [PENDING, QUEUED, RUNNING, SUCCEEDED, FAILED, CANCELED] }
+        riskScore: { type: integer, nullable: true }
+        severity: { type: string, nullable: true, enum: [LOW, MEDIUM, HIGH, CRITICAL] }
+        recommendation: { type: string, nullable: true }
+        safeToInstall: { type: boolean, nullable: true }
+        pass: { type: boolean, nullable: true }
+        executionSuccessful: { type: boolean, nullable: true }
+        analysisCompleteness: { $ref: '#/components/schemas/AnalysisCompleteness' }
+        llmUsed: { type: boolean, nullable: true }
+        scanMode: { type: string, nullable: true, enum: [static-only, static+llm] }
+        findingsSummary: { $ref: '#/components/schemas/FindingsSummary' }
+        reportUrl: { type: string, nullable: true }
+        sarifUrl: { type: string, nullable: true }
+        errorCode: { type: string, nullable: true }
+        errorMsg: { type: string, nullable: true }
+        metadata: { type: object }
+        createdAt: { type: string, format: date-time }
+        startedAt: { type: string, format: date-time, nullable: true }
+        finishedAt: { type: string, format: date-time, nullable: true }
+
+    ScanTaskResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data: { $ref: '#/components/schemas/ScanTask' }
+
+    Finding:
+      type: object
+      properties:
+        findingId: { type: string }
+        ruleId: { type: string }
+        severity: { type: string }
+        category: { type: string, nullable: true }
+        pattern: { type: string, nullable: true }
+        file: { type: string, nullable: true }
+        startLine: { type: integer, nullable: true }
+        endLine: { type: integer, nullable: true }
+        message: { type: string, nullable: true }
+        explanation: { type: string, nullable: true }
+        remediation: { type: string, nullable: true }
+        confidence: { type: number, nullable: true }
+        matchedText: { type: string, nullable: true }
+        sourceUrl: { type: string, nullable: true }
+        transitiveDepth: { type: integer, nullable: true }
+
+    FindingsPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Finding' }
+        page: { type: integer }
+        size: { type: integer }
+        total: { type: integer }
+
+    FindingsPageResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data: { $ref: '#/components/schemas/FindingsPage' }
+
+    ScanPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/ScanTask' }
+        page: { type: integer }
+        size: { type: integer }
+        total: { type: integer }
+
+    ScanPageResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data: { $ref: '#/components/schemas/ScanPage' }
+
+    Rule:
+      type: object
+      properties:
+        ruleId: { type: string }
+        pattern: { type: string }
+        severity: { type: string }
+        description: { type: string }
+
+    RuleCatalog:
+      type: object
+      properties:
+        categories:
+          type: array
+          items:
+            type: object
+            properties:
+              category: { type: string }
+              displayName: { type: string }
+              rules:
+                type: array
+                items: { $ref: '#/components/schemas/Rule' }
+
+    RuleCatalogResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data: { $ref: '#/components/schemas/RuleCatalog' }
+
+    Baseline:
+      type: object
+      properties:
+        baselineId: { type: string }
+        name: { type: string }
+        format: { type: string }
+        version: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    BaselineResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data: { $ref: '#/components/schemas/Baseline' }
+
+    BaselineDetail:
+      type: object
+      properties:
+        baselineId: { type: integer, format: int64 }
+        name: { type: string }
+        content: { type: string }
+        format: { type: string }
+        version: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    BaselineDetailResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data: { $ref: '#/components/schemas/BaselineDetail' }
+
+    BaselineList:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Baseline' }
+
+    BaselineListResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data: { $ref: '#/components/schemas/BaselineList' }
+
+    HealthResponse:
+      type: object
+      properties:
+        status: { type: string, enum: [UP, DOWN, DEGRADED] }
+        checks:
+          type: object
+          additionalProperties: { type: string }
+
+    EngineHealth:
+      type: object
+      properties:
+        status: { type: string, enum: [UP, DOWN, DEGRADED] }
+        version: { type: string }
+        provider: { type: string, nullable: true }
+        model: { type: string, nullable: true }
+        llmAvailable: { type: boolean }
+        maxConcurrentScans: { type: integer }
+        activeScans: { type: integer }
+        queueDepth: { type: integer }
+        lastCheckAt: { type: string, format: date-time }
+
+    EngineHealthResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data: { $ref: '#/components/schemas/EngineHealth' }
