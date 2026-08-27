@@ -38,7 +38,7 @@ from skillspector.inspection_ledger import (
 )
 from skillspector.models import Finding
 
-MAX_WORKFLOW_SECONDS = 60.0
+MAX_WORKFLOW_SECONDS = 600.0
 MAX_WORKFLOW_BYTES = 64 * 1024 * 1024
 MAX_WORKFLOW_ARTIFACTS = 10_000
 MAX_WORKFLOW_LIMITATION_RECORDS = 256
