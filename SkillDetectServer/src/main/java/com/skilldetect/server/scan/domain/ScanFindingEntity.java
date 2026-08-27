@@ -44,25 +44,25 @@ public class ScanFindingEntity {
     @Column(name = "end_line")
     private Integer endLine;
 
-    @Column(name = "message")
+    @Column(name = "message", columnDefinition = "text")
     private String message;
 
-    @Column(name = "explanation")
+    @Column(name = "explanation", columnDefinition = "text")
     private String explanation;
 
-    @Column(name = "remediation")
+    @Column(name = "remediation", columnDefinition = "text")
     private String remediation;
 
     @Column(name = "confidence")
     private Double confidence;
 
-    @Column(name = "matched_text")
+    @Column(name = "matched_text", columnDefinition = "text")
     private String matchedText;
 
     @Column(name = "fingerprint", length = 128)
     private String fingerprint;
 
-    @Column(name = "source_url")
+    @Column(name = "source_url", columnDefinition = "text")
     private String sourceUrl;
 
     @Column(name = "transitive_depth")
