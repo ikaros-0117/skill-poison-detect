@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Skill 投毒安全检测服务 · 项目汇报文档</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  :root {
+    --bg: #f6f7fb;
+    --panel: #ffffff;
+    --ink: #1f2430;
+    --muted: #6b7280;
+    --line: #e5e7eb;
+    --accent: #4f46e5;
+    --accent-soft: #eef2ff;
+    --ok: #059669;
+    --warn: #b45309;
+    --danger: #dc2626;
+    --code-bg: #0f172a;
+    --code-ink: #e2e8f0;
+    --radius: 14px;
+    --sidebar-w: 264px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", Roboto, Helvetica, Arial, sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+    line-height: 1.72;
+    font-size: 15px;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* Sidebar */
+  .layout { display: grid; grid-template-columns: var(--sidebar-w) minmax(0, 1fr); min-height: 100vh; }
+  .sidebar {
+    position: sticky; top: 0; height: 100vh; overflow-y: auto;
+    background: linear-gradient(180deg, #1e1b4b 0%, #312e81 100%);
+    color: #e0e7ff; padding: 28px 20px;
+  }
+  .sidebar .brand { font-size: 19px; font-weight: 700; color: #fff; line-height: 1.35; }
+  .sidebar .brand .sub { display:block; font-size: 12px; font-weight: 400; color: #c7d2fe; margin-top: 4px; }
+  .sidebar nav { margin-top: 22px; }
+  .sidebar nav a {
+    display: block; color: #c7d2fe; padding: 7px 12px; border-radius: 8px; font-size: 13.5px; margin: 2px 0;
+  }
+  .sidebar nav a:hover { background: rgba(255,255,255,.08); color: #fff; text-decoration: none; }
+  .sidebar .badge-version { margin-top: 20px; font-size: 12px; color: #a5b4fc; border-top: 1px solid rgba(255,255,255,.15); padding-top: 14px; }
+
+  /* Main */
+  .main { padding: 36px 48px 80px; max-width: 1060px; }
+  .hero {
+    background: linear-gradient(120deg, #312e81 0%, #4f46e5 60%, #6366f1 100%);
+    color: #fff; border-radius: var(--radius); padding: 34px 34px 30px; margin-bottom: 26px;
+    box-shadow: 0 18px 40px -18px rgba(49,46,129,.55);
+  }
+  .hero h1 { margin: 0 0 8px; font-size: 27px; letter-spacing: .2px; }
+  .hero p { margin: 0; color: #e0e7ff; max-width: 760px; }
+  .hero .meta { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.28);
+    color: #fff; padding: 4px 11px; border-radius: 999px; font-size: 12.5px;
+  }
+
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 26px 28px; margin-bottom: 22px; }
+  h2 { margin: 0 0 6px; font-size: 21px; }
+  h2 .num { color: var(--accent); margin-right: 8px; }
+  .lead { color: var(--muted); margin: 0 0 16px; font-size: 14px; }
+  h3 { font-size: 16px; margin: 24px 0 10px; padding-left: 10px; border-left: 4px solid var(--accent); }
+  h4 { font-size: 14.5px; margin: 18px 0 8px; }
+
+  p { margin: 10px 0; }
+  ul, ol { margin: 8px 0; padding-left: 22px; }
+  li { margin: 4px 0; }
+
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; margin: 12px 0; }
+  th, td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: #f1f3fb; font-weight: 600; white-space: nowrap; }
+  tr:nth-child(even) td { background: #fafbff; }
+  code {
+    font-family: "SFMono-Regular", ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+    font-size: 12.5px;
+  }
+  :not(pre) > code { background: #eef1fb; color: #3730a3; padding: 1.5px 6px; border-radius: 6px; }
+
+  pre {
+    background: var(--code-bg); color: var(--code-ink); padding: 16px 18px; border-radius: 10px;
+    overflow-x: auto; font-size: 12.8px; line-height: 1.6;
+  }
+  pre code { background: none; color: inherit; padding: 0; }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  @media (max-width: 900px) { .grid2, .grid3 { grid-template-columns: 1fr; } }
+
+  .card { background: #fbfcff; border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; }
+  .card h4 { margin-top: 0; }
+  .kv { display: grid; grid-template-columns: 150px 1fr; row-gap: 4px; column-gap: 12px; font-size: 13.5px; }
+  .kv dt { color: var(--muted); }
+  .kv dd { margin: 0; }
+
+  .badge { display: inline-block; font-size: 11.5px; padding: 2px 9px; border-radius: 999px; font-weight: 600; white-space: nowrap; }
+  .b-ok { background: #ecfdf5; color: var(--ok); }
+  .b-warn { background: #fff7ed; color: var(--warn); }
+  .b-danger { background: #fef2f2; color: var(--danger); }
+  .b-info { background: var(--accent-soft); color: var(--accent); }
+  .b-muted { background: #f3f4f6; color: var(--muted); }
+
+  .callout { border-radius: 10px; padding: 12px 16px; font-size: 13.5px; margin: 14px 0; }
+  .callout.info { background: var(--accent-soft); border-left: 4px solid var(--accent); }
+  .callout.warn { background: #fff7ed; border-left: 4px solid #f59e0b; }
+
+  .mermaid { background: #fbfcff; border: 1px solid var(--line); border-radius: 12px; padding: 18px; margin: 14px 0; text-align: center; }
+  .foot { color: var(--muted); font-size: 12.5px; margin-top: 26px; }
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="brand">Skill 投毒安全检测服务<span class="sub">Project Report · v0.1.0</span></div>
+    <nav>
+      <a href="#overview">1. 项目概览</a>
+      <a href="#architecture">2. 系统架构</a>
+      <a href="#api">3. 对外 API</a>
+      <a href="#design">4. 内部设计</a>
+      <a href="#engine">5. 检测引擎与规则</a>
+      <a href="#usage">6. 使用指南</a>
+      <a href="#reliability">7. 可靠性 / 可观测 / 安全</a>
+      <a href="#structure">8. 项目结构</a>
+      <a href="#status">9. 进度与后续规划</a>
+      <a href="#license">10. 许可证说明</a>
+    </nav>
+    <div class="badge-version">生成时间：2026-08-27<br>范围：skill-poison-scan 仓库</div>
+  </aside>
+
+  <main class="main">
+    <div class="hero">
+      <h1>Skill 投毒安全检测服务</h1>
+      <p>面向 AI Agent Skill 的投毒 / 恶意行为安全检测后端。对上传的 Skill 包（zip）执行静态规则 + 可选 LLM 语义分析，输出风险评分、发现项与 SARIF 报告，并支撑流水线门禁。</p>
+      <div class="meta">
+        <span class="chip">检测引擎：SkillSpector 2.9.6（Apache-2.0）</span>
+        <span class="chip">控制面：Spring Boot 3.3.5 / Java 17</span>
+        <span class="chip">检测规则：17 类 / 72 条</span>
+        <span class="chip">部署：Docker Compose 单机</span>
+      </div>
+    </div>
+
+    <!-- 1 -->
+    <section id="overview">
+      <h2><span class="num">1</span>项目概览</h2>
+      <p class="lead">一句话定位：为“AI Agent Skill 安装前”提供自动化安全检测能力，识别提示注入、数据外泄、供应链投毒、恶意代码执行等风险。</p>
+      <div class="grid3">
+        <div class="card"><h4>🎯 目标</h4><p style="margin:0">在 Skill 被安装/运行前发现投毒与恶意模式，给出可解释的风险结论与修复建议。</p></div>
+        <div class="card"><h4>🧩 组成</h4><p style="margin:0">Spring Boot 控制面 + FastAPI 引擎薄封装 + SkillSpector 检测核心。</p></div>
+        <div class="card"><h4>🔌 交付</h4><p style="margin:0">HMI 交互接口、M2M 流水线接口（异步 + 轮询 + SARIF）、健康/监控接口。</p></div>
+      </div>
+      <h3>能力清单</h3>
+      <ul>
+        <li><b>静态扫描</b>：17 大类 72 条规则，覆盖 Prompt Injection、Anti-Refusal、Data Exfiltration、Privilege Escalation、Supply Chain、YARA 恶意样本、MCP 权限/工具投毒等。</li>
+        <li><b>语义分析（可选）</b>：接入内部 OpenAI 兼容网关，做行为/意图语义判定，输出静态 + LLM 双模式结论。</li>
+        <li><b>异步任务与门禁</b>：Redis 队列 + PostgreSQL 事实来源，支持并发、取消、重试、可配置风险阈值门禁（pass/fail）。</li>
+        <li><b>报告输出</b>：JSON / Markdown / SARIF 2.1.0，可直接对接 CI 流水线。</li>
+        <li><b>工程化保障</b>：限流、引擎熔断、启动对账自愈、30 天留存清理、Prometheus 指标、健康探测。</li>
+      </ul>
+    </section>
+
+    <!-- 2 -->
+    <section id="architecture">
+      <h2><span class="num">2</span>系统架构</h2>
+      <p class="lead">控制面与检测引擎解耦，PostgreSQL 为事实来源，Redis 仅作派发通道与短期状态。</p>
+      <pre class="mermaid">
+flowchart TB
+    subgraph callers["调用方"]
+        FE["前端页面 HMI<br/>/api/v1"]
+        CI["流水线 / CI（M2M）<br/>/api/m2m/v1"]
+        OPS["运维 / 健康探测<br/>/healthz /readyz"]
+    end
+    subgraph server["SkillDetectServer（Spring Boot 控制面）"]
+        API["REST API"]
+        SEC["鉴权(预留) · 限流 · 熔断"]
+        ORCH["任务编排 · 状态机 · 持久化"]
+    end
+    subgraph infra["基础设施"]
+        PG[("PostgreSQL 主库<br/>事实来源")]
+        RED[("Redis<br/>任务队列")]
+        VOL[("共享卷 /data<br/>zip 与报告")]
+    end
+    subgraph eng["检测引擎"]
+        W["skillspector-engine<br/>FastAPI 薄封装"]
+        CORE["SkillSpector 检测图<br/>静态 + LLM 语义"]
+    end
+    LLM["内部 OpenAI 兼容网关（可选）"]
+
+    FE --> API
+    CI --> API
+    OPS --> API
+    API --> SEC --> ORCH
+    ORCH --> PG
+    ORCH --> RED
+    ORCH --> VOL
+    ORCH -->|"HTTP POST /v1/scan（同步长连接）"| W
+    W --> CORE
+    CORE --> LLM
+    W --> VOL
+      </pre>
+      <h3>职责边界</h3>
+      <table>
+        <thead><tr><th>组件</th><th>职责</th></tr></thead>
+        <tbody>
+          <tr><td><b>SkillDetectServer</b></td><td>对外 API、任务编排、状态机、持久化、文件存储、报告生成、限流/熔断/监控、健康聚合。</td></tr>
+          <tr><td><b>skillspector-engine</b></td><td>仅负责“检测”：调用 SkillSpector 图，返回结构化 verdict；无业务状态，可独立扩缩容/升级。</td></tr>
+          <tr><td><b>PostgreSQL</b></td><td>scan_task / scan_finding / scan_baseline / api_credential(预留) / engine_health_log 的事实来源。</td></tr>
+          <tr><td><b>Redis</b></td><td>任务队列 + 取消标记 + 限流计数；可重建，不承载持久数据。</td></tr>
+        </tbody>
+      </table>
+      <h3>关键设计决策</h3>
+      <table>
+        <thead><tr><th>决策点</th><th>结论</th><th>理由</th></tr></thead>
+        <tbody>
+          <tr><td>引擎集成</td><td>FastAPI 薄封装 <code>graph.ainvoke</code></td><td>复用已测试核心，健康检查自然，可横向扩展。</td></tr>
+          <tr><td>引擎调用</td><td>同步 <code>POST /v1/scan</code>（长连接）</td><td>MVP 简单；已预留任务登记，后续可切 submit+poll。</td></tr>
+          <tr><td>队列</td><td>Redis List <code>LPUSH/BRPOP</code></td><td>单消费者够用；P1 可选升级 Stream（ack/重投）。</td></tr>
+          <tr><td>并发</td><td><code>max-active</code> 个 worker 线程（默认 8）</td><td>100 在途 = 队列容量；8 = 真正同时扫描数。</td></tr>
+          <tr><td>事实来源</td><td>PostgreSQL</td><td>丢队列不丢任务，可对账重建。</td></tr>
+          <tr><td>门禁判定</td><td>Server 用 <code>riskThreshold</code> 重算 <code>pass</code></td><td>引擎阈值固定 50，业务阈值可配置。</td></tr>
+          <tr><td>鉴权</td><td>后置、开关化</td><td><code>security.enabled=false</code>，接口/数据模型已预留。</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 3 -->
+    <section id="api">
+      <h2><span class="num">3</span>对外 API</h2>
+      <p class="lead">三类接口：HMI（前端/人机）、M2M（流水线/机机）、Health（健康）。统一响应包裹 <code>{code, message, requestId, data}</code>，<code>code=0</code> 表示成功。</p>
+
+      <h3>3.1 接口总览</h3>
+      <table>
+        <thead><tr><th>组</th><th>方法</th><th>路径</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td rowspan="9">HMI<br><span class="badge b-info">/api/v1</span></td><td>POST</td><td><code>/api/v1/scans</code></td><td>上传 zip 创建扫描</td></tr>
+          <tr><td>GET</td><td><code>/api/v1/scans</code></td><td>历史任务列表（分页/过滤）</td></tr>
+          <tr><td>GET</td><td><code>/api/v1/scans/{taskId}</code></td><td>任务状态与结论摘要</td></tr>
+          <tr><td>GET</td><td><code>/api/v1/scans/{taskId}/report</code></td><td>下载报告（json | markdown）</td></tr>
+          <tr><td>GET</td><td><code>/api/v1/scans/{taskId}/findings</code></td><td>发现项分页（severity/ruleId/category）</td></tr>
+          <tr><td>POST</td><td><code>/api/v1/scans/{taskId}/cancel</code></td><td>取消扫描</td></tr>
+          <tr><td>GET</td><td><code>/api/v1/rules</code></td><td>规则目录（17 类 / 72 条）</td></tr>
+          <tr><td>POST / GET</td><td><code>/api/v1/baselines</code></td><td>基线管理（误报抑制）</td></tr>
+          <tr><td>GET</td><td><code>/api/v1/baselines/{baselineId}</code></td><td>基线详情</td></tr>
+          <tr><td rowspan="5">M2M<br><span class="badge b-info">/api/m2m/v1</span></td><td>POST</td><td><code>/api/m2m/v1/scans</code></td><td>上传 zip 创建扫描（异步 + 轮询）</td></tr>
+          <tr><td>GET</td><td><code>/api/m2m/v1/scans/{taskId}</code></td><td>轮询任务结果（含 <code>sarifUrl</code>）</td></tr>
+          <tr><td>GET</td><td><code>/api/m2m/v1/scans/{taskId}/report/sarif</code></td><td>下载 SARIF 2.1.0 报告</td></tr>
+          <tr><td>POST</td><td><code>/api/m2m/v1/scans/{taskId}/cancel</code></td><td>取消扫描</td></tr>
+          <tr><td>POST</td><td><code>/api/m2m/v1/scans/{taskId}/retry</code></td><td>重试（仅 FAILED/CANCELED）</td></tr>
+          <tr><td rowspan="3">Health<br><span class="badge b-info">/</span></td><td>GET</td><td><code>/healthz</code></td><td>存活探测</td></tr>
+          <tr><td>GET</td><td><code>/readyz</code></td><td>就绪探测（DB + 引擎健康）</td></tr>
+          <tr><td>GET</td><td><code>/api/v1/engine/health</code></td><td>引擎健康详情（可 <code>?deep=true</code>）</td></tr>
+          <tr><td>监控<br><span class="badge b-muted">actuator</span></td><td>GET</td><td><code>/actuator/prometheus</code></td><td>Prometheus 指标</td></tr>
+        </tbody>
+      </table>
+
+      <h3>3.2 创建扫描请求（HMI / M2M 通用）</h3>
+      <p>均为 <code>multipart/form-data</code>，<code>file</code> 必填（skill 打包 zip，上限 100MiB）。</p>
+      <table>
+        <thead><tr><th>字段</th><th>类型</th><th>默认</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td><code>file</code></td><td>binary</td><td>—</td><td>skill 打包 zip（必填）</td></tr>
+          <tr><td><code>useLlm</code></td><td>boolean</td><td>false</td><td>是否启用 LLM 语义分析</td></tr>
+          <tr><td><code>riskThreshold</code></td><td>integer</td><td>50</td><td>覆盖全局门禁阈值（0-100）</td></tr>
+          <tr><td><code>baselineId</code></td><td>string</td><td>—</td><td>可选基线 ID（HMI）</td></tr>
+          <tr><td><code>metadata</code></td><td>string(JSON)</td><td>—</td><td>M2M 透传：如 <code>{"repo":"x","commit":"abc"}</code></td></tr>
+        </tbody>
+      </table>
+
+      <h3>3.3 任务响应关键字段</h3>
+      <table>
+        <thead><tr><th>字段</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td><code>taskId</code> / <code>status</code></td><td>任务号；PENDING/QUEUED/RUNNING/SUCCEEDED/FAILED/CANCELED</td></tr>
+          <tr><td><code>riskScore</code> / <code>severity</code></td><td>0-100 风险分；LOW/MEDIUM/HIGH/CRITICAL</td></tr>
+          <tr><td><code>recommendation</code> / <code>safeToInstall</code></td><td>建议（SAFE/CAUTION/REVIEW…）；引擎侧是否可安全安装</td></tr>
+          <tr><td><code>pass</code></td><td>最终门禁 = <code>riskScore &lt;= riskThreshold</code></td></tr>
+          <tr><td><code>scanMode</code> / <code>llmUsed</code></td><td><code>static-only</code> / <code>static+llm</code>；是否真正执行 LLM</td></tr>
+          <tr><td><code>findingsSummary</code></td><td>critical/high/medium/low 计数</td></tr>
+          <tr><td><code>reportUrl</code> / <code>sarifUrl</code></td><td>报告下载地址（HMI json/markdown；M2M sarif）</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout info">完整 OpenAPI 3.0 定义见 <code>SkillDetectServer/docs/openapi.yaml</code>。</div>
+    </section>
+
+    <!-- 4 -->
+    <section id="design">
+      <h2><span class="num">4</span>内部设计</h2>
+      <p class="lead">Server 采用分层包结构；一次扫描遵循“先落库提交、再入队派发”的顺序，避免事务竞态。</p>
+
+      <h3>4.1 Server 模块划分</h3>
+      <table>
+        <thead><tr><th>包</th><th>职责</th><th>关键类</th></tr></thead>
+        <tbody>
+          <tr><td><code>common</code></td><td>响应包裹 / 异常</td><td><code>ApiResponse</code>、<code>BusinessException</code>、<code>GlobalExceptionHandler</code></td></tr>
+          <tr><td><code>config</code></td><td>配置 / 指标 / 限流 / Web</td><td><code>ScanProperties</code>、<code>RateLimitProperties</code>、<code>ScanMetrics</code>、<code>RateLimitInterceptor</code>、<code>WebConfig</code>、<code>AppConfig</code></td></tr>
+          <tr><td><code>engine</code></td><td>引擎客户端 / 熔断</td><td><code>EngineClient</code>、<code>EngineScanResponse</code>、<code>EngineCircuitBreaker</code></td></tr>
+          <tr><td><code>health</code></td><td>健康聚合</td><td><code>HealthController</code>、<code>EngineHealthProbe</code>、<code>EngineHealthLogEntity/Repository</code></td></tr>
+          <tr><td><code>scan/domain</code></td><td>实体 / 状态枚举</td><td><code>ScanTaskEntity</code>、<code>ScanFindingEntity</code>、<code>ScanBaselineEntity</code>、<code>ScanStatus</code></td></tr>
+          <tr><td><code>scan/repository</code></td><td>数据访问</td><td><code>ScanTaskRepository</code>、<code>ScanFindingRepository</code>、<code>ScanBaselineRepository</code></td></tr>
+          <tr><td><code>scan/queue</code></td><td>队列封装</td><td><code>ScanQueueService</code></td></tr>
+          <tr><td><code>scan/service</code></td><td>编排 / 状态 / 文件 / 对账 / 清理</td><td><code>ScanService</code>、<code>ScanExecutionService</code>、<code>ScanStateService</code>、<code>ScanReconciler</code>、<code>ScanRetentionCleaner</code>、<code>FileStorageService</code></td></tr>
+          <tr><td><code>scan/dispatcher</code></td><td>worker 调度</td><td><code>ScanDispatcher</code></td></tr>
+          <tr><td><code>scan/controller</code></td><td>HMI / M2M 控制器</td><td><code>HmiScanController</code>、<code>M2mScanController</code>、<code>ScanDtos</code></td></tr>
+          <tr><td><code>scan/rules</code></td><td>规则目录</td><td><code>RulesController</code>（加载 <code>rules.json</code>）</td></tr>
+          <tr><td><code>scan/baseline</code></td><td>基线管理</td><td><code>BaselineController</code></td></tr>
+        </tbody>
+      </table>
+
+      <h3>4.2 任务状态机</h3>
+      <pre class="mermaid">
+stateDiagram-v2
+    [*] --> PENDING: 创建
+    PENDING --> QUEUED: 提交后落库并入队
+    QUEUED --> RUNNING: worker 原子抢占
+    RUNNING --> SUCCEEDED: 扫描完成
+    RUNNING --> FAILED: 执行/超时失败
+    QUEUED --> CANCELED: 取消（排队中）
+    RUNNING --> CANCELED: 取消（运行中，结果被守卫忽略）
+    FAILED --> QUEUED: retry（网络类错误，retry_count &lt; 3）
+    SUCCEEDED --> [*]
+    FAILED --> [*]
+    CANCELED --> [*]
+      </pre>
+
+      <h3>4.3 一次扫描的数据流</h3>
+      <pre class="mermaid">
+sequenceDiagram
+    participant C as 调用方
+    participant S as SkillDetectServer
+    participant PG as PostgreSQL
+    participant R as Redis
+    participant E as Engine
+    participant L as LLM网关(可选)
+
+    C->>S: POST /scans (multipart zip + useLlm + riskThreshold + baselineId?)
+    S->>S: 校验大小/sha256/落盘 /data/&lt;taskNo&gt;/input.zip
+    S->>PG: insert scan_task(QUEUED)
+    S->>R: LPUSH skillscan:queue &lt;taskNo&gt;
+    S-->>C: 202 {taskId}
+
+    loop dispatcher（max-active=8 个 worker）
+        R-->>S: BRPOP &lt;taskNo&gt;
+        S->>PG: 原子抢占 QUEUED→RUNNING
+        S->>E: POST /v1/scan {path,use_llm,output_format,baseline?}
+        E->>L: LLM 语义分析（useLlm=true 时）
+        E-->>S: verdict + report
+        S->>PG: 写结果 + findings + 门禁判定
+        S->>S: 写报告文件（json/markdown/sarif）
+    end
+      </pre>
+
+      <h3>4.4 数据模型（PostgreSQL，事实来源）</h3>
+      <table>
+        <thead><tr><th>表</th><th>用途</th></tr></thead>
+        <tbody>
+          <tr><td><code>scan_task</code></td><td>任务主表：状态机、结论摘要、报告路径、<code>metadata</code> JSONB、<code>baseline_id</code>、<code>created_by</code>。</td></tr>
+          <tr><td><code>scan_finding</code></td><td>发现项：<code>task_id</code>、<code>rule_id</code>、severity、位置、说明、指纹、<code>source_url</code> 等。</td></tr>
+          <tr><td><code>scan_baseline</code></td><td>基线（YAML/JSON 内容，误报抑制）。</td></tr>
+          <tr><td><code>api_credential</code></td><td>预留：M2M API Key（仅存哈希）。</td></tr>
+          <tr><td><code>engine_health_log</code></td><td>引擎健康探活历史（可观测）。</td></tr>
+        </tbody>
+      </table>
+
+      <h3>4.5 Redis 队列契约</h3>
+      <table>
+        <thead><tr><th>Key / 类型</th><th>用途</th></tr></thead>
+        <tbody>
+          <tr><td><code>skillscan:queue</code>（List）</td><td>待扫描任务队列，元素为 <code>taskNo</code>；去重直接 <code>LRANGE</code> 成员判断。</td></tr>
+          <tr><td><code>skillscan:cancelled</code>（Set, TTL 24h）</td><td>待取消/已取消标记，消费前跳过。</td></tr>
+          <tr><td><code>skillscan:active</code>（String, INCR/DECR）</td><td>预留：全局执行并发计数（多实例）。</td></tr>
+        </tbody>
+      </table>
+      <div class="callout info">P0 使用 Redis List；P1 可无侵入切换 Redis Stream（仅改 <code>ScanQueueService</code> 内部，上层不变）。</div>
+    </section>
+
+    <!-- 5 -->
+    <section id="engine">
+      <h2><span class="num">5</span>检测引擎与规则</h2>
+      <p class="lead">检测核心复用 NVIDIA 开源项目 <b>SkillSpector</b>（v2.9.6，Apache-2.0），以源码 vendored 方式随仓库分发，引擎镜像构建时 <code>pip install</code>。</p>
+
+      <h3>5.1 引擎薄封装接口（内部，不对外）</h3>
+      <table>
+        <thead><tr><th>方法</th><th>路径</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td>GET</td><td><code>/health</code></td><td>版本 / provider / model / LLM 可用性 / 活跃数 / 统计。</td></tr>
+          <tr><td>GET</td><td><code>/health/deep?timeout=30</code></td><td>端到端探活：静态扫内置 fixture。</td></tr>
+          <tr><td>POST</td><td><code>/v1/scan</code></td><td>同步扫描，body：<code>{path, use_llm, output_format, baseline}</code>。</td></tr>
+          <tr><td>POST</td><td><code>/v1/scan/cancel?scan_id=</code></td><td>尽力取消在途扫描。</td></tr>
+        </tbody>
+      </table>
+      <p>引擎 verdict 核心字段：<code>risk_score</code>（0-100）、<code>severity</code>、<code>recommendation</code>、<code>safe_to_install</code>、<code>execution_successful</code>、<code>analysis_completeness</code>、<code>findings[]</code>、<code>report</code>、<code>llm_requested/available/used</code>、<code>scan_mode</code>。</p>
+
+      <h3>5.2 检测规则目录（17 类 / 72 条）</h3>
+      <table>
+        <thead><tr><th>类别</th><th>规则数</th><th>规则 ID</th></tr></thead>
+        <tbody>
+          <tr><td>Prompt Injection</td><td>6</td><td>P1, P2, P3, P4, P5, P9</td></tr>
+          <tr><td>Anti-Refusal</td><td>3</td><td>AR1, AR2, AR3</td></tr>
+          <tr><td>Data Exfiltration</td><td>4</td><td>E1, E2, E3, E4</td></tr>
+          <tr><td>Privilege Escalation</td><td>3</td><td>PE1, PE2, PE3</td></tr>
+          <tr><td>Supply Chain</td><td>8</td><td>SC1-SC6, SC8, SC9</td></tr>
+          <tr><td>Excessive Agency</td><td>5</td><td>EA1-EA5</td></tr>
+          <tr><td>Output Handling</td><td>3</td><td>OH1, OH2, OH3</td></tr>
+          <tr><td>System Prompt Leakage</td><td>3</td><td>P6, P7, P8</td></tr>
+          <tr><td>Memory Poisoning</td><td>3</td><td>MP1, MP2, MP3</td></tr>
+          <tr><td>Tool Misuse</td><td>3</td><td>TM1, TM2, TM3</td></tr>
+          <tr><td>Rogue Agent</td><td>2</td><td>RA1, RA2</td></tr>
+          <tr><td>Trigger Abuse</td><td>3</td><td>TR1, TR2, TR3</td></tr>
+          <tr><td>Behavioral AST</td><td>9</td><td>AST1-AST9</td></tr>
+          <tr><td>Taint Tracking</td><td>5</td><td>TT1-TT5</td></tr>
+          <tr><td>YARA Signatures</td><td>4</td><td>YR1, YR2, YR3, YR4</td></tr>
+          <tr><td>MCP Least Privilege</td><td>4</td><td>LP1, LP2, LP3, LP4</td></tr>
+          <tr><td>MCP Tool Poisoning</td><td>4</td><td>TP1, TP2, TP3, TP4</td></tr>
+        </tbody>
+      </table>
+
+      <h3>5.3 LLM 语义分析</h3>
+      <p>启用 <code>useLlm=true</code> 时，引擎将 3 个语义分析器（开发者意图、安全发现、质量策略）+ 按文件分批的 <code>meta_analyzer</code> 接入内部 OpenAI 兼容网关，并将静态与语义结论融合输出。报告会<b>诚实呈现</b> <code>llm_requested / llm_available / llm_used</code> 三态，避免“声称用了 LLM 但实际未执行”的歧义。</p>
+      <div class="callout warn">本地已把 SkillSpector 工作流预算从 60s 调至 600s（对应 Server 引擎调用超时 720s），保证 LLM 多文件扫描有充足时间；该改动已提交。</div>
+    </section>
+
+    <!-- 6 -->
+    <section id="usage">
+      <h2><span class="num">6</span>使用指南</h2>
+      <h3>6.1 前置条件</h3>
+      <ul>
+        <li>Docker + Docker Compose（推荐 OrbStack）。</li>
+        <li>如需 LLM 语义分析，填写 <code>.env</code> 中 <code>OPENAI_BASE_URL</code> / <code>OPENAI_API_KEY</code> / <code>SKILLSPECTOR_MODEL</code>（纯静态扫描可不填）。</li>
+      </ul>
+      <h3>6.2 快速开始</h3>
+      <pre><code># 1. 配置 LLM（可选）
+cp .env.example .env   # 然后填写网关配置
+
+# 2. 构建并启动全部服务（server / engine / postgres / redis）
+docker compose up --build -d
+
+# 3. 查看状态
+docker compose ps
+curl http://localhost:8080/healthz
+curl http://localhost:8080/readyz
+curl http://localhost:8080/api/v1/engine/health</code></pre>
+      <h3>6.3 冒烟测试</h3>
+      <pre><code># 准备一个良性 skill zip
+mkdir -p /tmp/skill-test &amp;&amp; printf -- '---\nname: demo\ndescription: demo\n---\n# demo\n' &gt; /tmp/skill-test/SKILL.md
+(cd /tmp/skill-test &amp;&amp; zip -r ../skill-test.zip .)
+
+# HMI 静态扫描
+curl -F "file=@/tmp/skill-test.zip" -F "useLlm=false" http://localhost:8080/api/v1/scans
+curl http://localhost:8080/api/v1/scans/&lt;taskId&gt;
+
+# M2M SARIF 扫描
+curl -F "file=@/tmp/skill-test.zip" -F "useLlm=false" -F 'metadata={"repo":"x"}' http://localhost:8080/api/m2m/v1/scans
+curl http://localhost:8080/api/m2m/v1/scans/&lt;taskId&gt;/report/sarif</code></pre>
+      <h3>6.4 关键配置</h3>
+      <table>
+        <thead><tr><th>配置</th><th>默认</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td><code>scan.risk-threshold</code></td><td>50</td><td>可配置门禁阈值（请求级可覆盖）。</td></tr>
+          <tr><td><code>scan.concurrency.max-active</code></td><td>8</td><td>真正同时扫描的引擎并发数。</td></tr>
+          <tr><td><code>scan.engine.timeout-seconds</code></td><td>720</td><td>引擎调用超时（&gt; 10min 单次上限）。</td></tr>
+          <tr><td><code>scan.retention-days</code></td><td>30</td><td>终态任务留存天数。</td></tr>
+          <tr><td><code>scan.engine.circuit-failure-threshold</code></td><td>5</td><td>熔断连续失败阈值。</td></tr>
+          <tr><td><code>scan.engine.circuit-open-seconds</code></td><td>60</td><td>熔断开路时长。</td></tr>
+          <tr><td><code>rate-limit.enabled</code></td><td>true</td><td>限流开关。</td></tr>
+          <tr><td><code>rate-limit.hmi/m2m-requests-per-minute</code></td><td>120 / 60</td><td>每 IP 每分钟限流。</td></tr>
+          <tr><td><code>security.enabled</code></td><td>false</td><td>鉴权开关（设计见 auth-design.md）。</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 7 -->
+    <section id="reliability">
+      <h2><span class="num">7</span>可靠性 / 可观测 / 安全</h2>
+      <div class="grid2">
+        <div class="card">
+          <h4>🛡 可靠性</h4>
+          <ul>
+            <li><b>事实来源</b>：PostgreSQL 权威，Redis 可重建，重启对账补队列不丢任务。</li>
+            <li><b>自愈</b>：启动/周期把“QUEUED 但不在队列”的任务补入队；超时 RUNNING 置 FAILED(TIMEOUT)。</li>
+            <li><b>熔断</b>：引擎连续失败达阈值即开路，半开探活恢复。</li>
+            <li><b>取消/重试</b>：排队中直接 LREM；运行中结果被守卫忽略；网络类错误按 retry_count&lt;3 重投。</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>📈 可观测</h4>
+          <ul>
+            <li><code>/healthz</code>、<code>/readyz</code>、<code>/api/v1/engine/health</code>（含 deep 探活）。</li>
+            <li><code>/actuator/prometheus</code> 暴露 <code>skillscan_queue_depth</code> 等指标。</li>
+            <li>引擎健康历史写入 <code>engine_health_log</code>。</li>
+          </ul>
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="card">
+          <h4>🔐 安全（预留）</h4>
+          <ul>
+            <li>HMI：OIDC/SSO（JWT），身份写入 <code>created_by</code>。</li>
+            <li>M2M：<code>X-API-Key</code>，密钥仅存哈希，支持 scope/过期。</li>
+            <li>引擎内部：可选 <code>X-Engine-Token</code>，仅内网监听。</li>
+            <li>当前 <code>security.enabled=false</code>，接口与数据模型已预留，可开关化启用。</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>🚦 限流</h4>
+          <ul>
+            <li>Redis 固定窗口按 IP 区分 HMI（120/min）与 M2M（60/min）。</li>
+            <li>上传限制 100MiB，落盘后 sha256 校验。</li>
+            <li>引擎侧 <code>ENGINE_MAX_CONCURRENT_SCANS=8</code> 作为第二道保护。</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8 -->
+    <section id="structure">
+      <h2><span class="num">8</span>项目结构</h2>
+      <pre><code>.
+├── docker-compose.yml          # 一键编排 engine/server/postgres/redis + 共享卷
+├── .env / .env.example         # LLM 网关配置（需填写）
+├── SkillDetectServer/          # Spring Boot 控制面
+│   ├── src/main/java/com/skilldetect/server/   # 分层源码
+│   ├── src/main/resources/{application.yml, rules.json}
+│   └── docs/{openapi.yaml, schema.sql, redis-queue-contract.md, auth-design.md}
+├── skillspector-engine/        # 引擎薄封装（FastAPI 包 SkillSpector）
+│   ├── app.py / Dockerfile / requirements.txt
+│   └── fixtures/healthy_skill/
+├── SkillSpector/               # vendored 检测引擎源码（pip install）
+├── docs/                       # 项目级文档（架构/实现/开发/本地改动）
+└── report/                     # 本汇报文档</code></pre>
+    </section>
+
+    <!-- 9 -->
+    <section id="status">
+      <h2><span class="num">9</span>进度与后续规划</h2>
+      <h3>9.1 已完成</h3>
+      <table>
+        <thead><tr><th>阶段</th><th>内容</th><th>状态</th></tr></thead>
+        <tbody>
+          <tr><td>方案</td><td>架构 / 接口 / 数据 / 任务 / 健康 / 安全 / 部署 / 分期</td><td><span class="badge b-ok">已定稿</span></td></tr>
+          <tr><td>可评审物</td><td>OpenAPI、DDL、Redis 契约、引擎薄封装</td><td><span class="badge b-ok">已交付</span></td></tr>
+          <tr><td>P0</td><td>Spring Boot 工程、异步扫描、HMI/M2M、健康、SARIF</td><td><span class="badge b-ok">已验证</span></td></tr>
+          <tr><td>P1</td><td>LLM 接入、规则目录、重试、30 天留存</td><td><span class="badge b-ok">已验证（重试守卫）</span></td></tr>
+          <tr><td>P2</td><td>基线、限流、熔断、监控、深探健康</td><td><span class="badge b-ok">已实现/验证</span></td></tr>
+          <tr><td>P2 鉴权</td><td>设计文档（不实现）</td><td><span class="badge b-warn">仅 auth-design.md</span></td></tr>
+        </tbody>
+      </table>
+      <h3>9.2 尚未运行时验证 / 后续项</h3>
+      <ul>
+        <li>限流触发 429、熔断开路→半开→恢复的完整流转（代码已就绪）。</li>
+        <li>留存清理定时任务的实际删除效果（依赖时间条件）。</li>
+        <li>重试的实际执行链路（仅验证了状态守卫）。</li>
+        <li>鉴权落地：SSO issuer/JWKS 对接、M2M API Key filter、<code>api_credential</code> 管理。</li>
+        <li>可选：Redis List → Stream 升级、引擎侧 submit+poll 异步化、K8s 迁移。</li>
+      </ul>
+    </section>
+
+    <!-- 10 -->
+    <section id="license">
+      <h2><span class="num">10</span>许可证说明</h2>
+      <p>本项目编排层（<code>SkillDetectServer</code>、<code>skillspector-engine</code>）代码供内部使用；检测引擎依赖 <a href="https://github.com/NVIDIA/skillspector" target="_blank">SkillSpector</a>（Apache-2.0），使用前请阅读其 <code>LICENSE</code> 与 <code>THIRD_PARTY_NOTICES.md</code>。</p>
+    </section>
+
+    <div class="foot">本文档由项目仓库（skill-poison-scan）自动汇总生成，数据来源：README.md、docs/*、SkillDetectServer/docs/*、skillspector-engine/app.py、SkillDetectServer/src/main/resources/*。</div>
+  </main>
+</div>
+
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'base', securityLevel: 'loose',
+    themeVariables: {
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif',
+      primaryColor: '#eef2ff', primaryTextColor: '#1f2430', primaryBorderColor: '#6366f1',
+      lineColor: '#6b7280', secondaryColor: '#f8fafc', tertiaryColor: '#ffffff',
+      actorBkg: '#eef2ff', actorBorder: '#6366f1', actorTextColor: '#1f2430',
+      signalColor: '#334155', noteBkgColor: '#fef9c3', noteBorderColor: '#ca8a04'
+    }
+  });
+</script>
+</body>
+</html>

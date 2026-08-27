@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Skill 投毒安全检测服务 · 对外汇报</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  :root {
+    --ink: #151a2d;
+    --muted: #5b6478;
+    --accent: #4f46e5;
+    --accent2: #7c3aed;
+    --bg: #eef0f7;
+    --panel: #ffffff;
+    --line: #e3e6f0;
+    --ok: #059669;
+    --warn: #b45309;
+    --danger: #dc2626;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", Roboto, sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .stage { position: relative; height: 100vh; width: 100vw; overflow: hidden; }
+  .slide {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    padding: 64px 72px 92px;
+    opacity: 0; visibility: hidden; transform: translateX(24px);
+    transition: opacity .45s ease, transform .45s ease, visibility .45s;
+  }
+  .slide.active { opacity: 1; visibility: visible; transform: translateX(0); }
+  .inner { width: min(1180px, 100%); max-height: 100%; }
+
+  /* typography */
+  h1 { font-size: clamp(34px, 4.4vw, 62px); line-height: 1.08; margin: 0 0 18px; letter-spacing: -.5px; }
+  h2 { font-size: clamp(26px, 3vw, 40px); line-height: 1.15; margin: 0 0 14px; letter-spacing: -.3px; }
+  .lead { font-size: clamp(16px, 1.6vw, 22px); color: var(--muted); margin: 0 0 28px; max-width: 900px; }
+  .kicker { display: inline-block; font-size: 13px; font-weight: 700; letter-spacing: 2px; color: var(--accent); text-transform: uppercase; margin-bottom: 14px; }
+  a { color: var(--accent); }
+
+  /* cover */
+  .cover { background: radial-gradient(1200px 600px at 15% -10%, #6d63ff 0%, transparent 60%), linear-gradient(135deg, #1e1b4b 0%, #312e81 55%, #4f46e5 100%); color: #fff; }
+  .cover h1 { font-size: clamp(40px, 5.4vw, 76px); }
+  .cover .lead { color: #dbe3ff; }
+  .cover .chip { border-color: rgba(255,255,255,.35); background: rgba(255,255,255,.12); }
+  .cover .brand { font-size: 13px; letter-spacing: 3px; color: #c7d2fe; text-transform: uppercase; }
+
+  .chip { display: inline-block; font-size: 13px; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--line); background: #fff; color: var(--ink); font-weight: 600; margin: 4px 6px 4px 0; }
+  .chip.accent { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  /* grids & cards */
+  .grid { display: grid; gap: 20px; }
+  .g2 { grid-template-columns: repeat(2, 1fr); }
+  .g3 { grid-template-columns: repeat(3, 1fr); }
+  .g4 { grid-template-columns: repeat(4, 1fr); }
+  @media (max-width: 760px) { .g2, .g3, .g4 { grid-template-columns: 1fr; } .slide { padding: 40px 24px 80px; } }
+
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 24px 24px 22px; box-shadow: 0 10px 30px -22px rgba(21,26,45,.35); }
+  .card h3 { margin: 0 0 8px; font-size: 19px; }
+  .card p { margin: 0; color: var(--muted); font-size: 14.5px; line-height: 1.65; }
+  .card .num { font-size: 40px; font-weight: 800; color: var(--accent); letter-spacing: -1px; }
+  .card .num small { font-size: 15px; font-weight: 600; color: var(--muted); letter-spacing: 0; }
+
+  .icon { width: 46px; height: 46px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 14px; }
+  .i-indigo { background: #eef2ff; }
+  .i-green { background: #ecfdf5; }
+  .i-amber { background: #fffbeb; }
+  .i-rose { background: #fff1f2; }
+
+  /* rules cloud */
+  .cloud { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
+  .tag { font-size: 14px; font-weight: 600; padding: 8px 14px; border-radius: 999px; background: #f4f5fb; border: 1px solid var(--line); color: var(--ink); }
+  .tag.hot { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  /* table */
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+  th, td { border-bottom: 1px solid var(--line); padding: 10px 12px; text-align: left; vertical-align: top; }
+  th { color: var(--muted); font-size: 12.5px; text-transform: uppercase; letter-spacing: .6px; }
+  code { font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; font-size: 12.5px; background: #f1f3fb; color: #3730a3; padding: 2px 6px; border-radius: 6px; }
+  pre { background: #0f172a; color: #e2e8f0; padding: 18px 20px; border-radius: 14px; font-size: 13px; line-height: 1.7; overflow: auto; margin: 0; }
+
+  .mermaid { text-align: center; }
+  .foot { position: absolute; bottom: 22px; left: 0; right: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 72px; color: var(--muted); font-size: 13px; z-index: 5; }
+  .cover .foot { color: #c7d2fe; }
+  .dots { display: flex; gap: 8px; }
+  .dots i { width: 9px; height: 9px; border-radius: 999px; background: rgba(0,0,0,.18); cursor: pointer; transition: all .2s; }
+  .dots i.on { background: var(--accent); width: 24px; }
+  .cover .dots i { background: rgba(255,255,255,.35); }
+  .cover .dots i.on { background: #fff; }
+
+  .nav { position: absolute; top: 50%; transform: translateY(-50%); z-index: 6; width: 46px; height: 46px; border-radius: 50%; border: 1px solid var(--line); background: #fff; color: var(--ink); font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 20px -12px rgba(0,0,0,.4); }
+  .nav.prev { left: 22px; }
+  .nav.next { right: 22px; }
+  .nav:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .nav.hidden { opacity: .25; pointer-events: none; }
+
+  .end { background: linear-gradient(135deg, #1e1b4b 0%, #4f46e5 100%); color: #fff; }
+  .end .lead { color: #dbe3ff; }
+  .end h1 { color: #fff; }
+  .end .tag { background: rgba(255,255,255,.14); border-color: rgba(255,255,255,.28); color: #fff; }
+
+  .timeline { display: flex; gap: 12px; margin-top: 6px; }
+  .tl { flex: 1; border-radius: 14px; padding: 18px; background: #f7f8fc; border: 1px solid var(--line); }
+  .tl.done { background: #ecfdf5; border-color: #a7f3d0; }
+  .tl.now { background: #eef2ff; border-color: #c7d2fe; }
+  .tl.next { background: #f7f8fc; }
+  .tl h4 { margin: 0 0 6px; font-size: 15px; }
+  .tl p { margin: 0; font-size: 13px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+
+  <!-- 1 cover -->
+  <section class="slide cover active">
+    <div class="inner">
+      <div class="brand">内部产品 · 对外交付简报</div>
+      <h1 style="margin-top:18px">Skill 投毒安全检测服务</h1>
+      <p class="lead">让每一个 AI Agent Skill，在安装与运行之前，都经得起安全审查。</p>
+      <div>
+        <span class="chip">静态 + LLM 双引擎</span>
+        <span class="chip">17 类 · 72 条检测规则</span>
+        <span class="chip">SARIF 流水线门禁</span>
+        <span class="chip">Docker 一键部署</span>
+      </div>
+    </div>
+    <div class="foot"><span>Skill Poisoning Detection Service</span><span>v0.1.0 · 2026-08-27</span></div>
+  </section>
+
+  <!-- 2 why -->
+  <section class="slide">
+    <div class="inner">
+      <span class="kicker">背景与痛点</span>
+      <h2>Skill 正成为新的攻击面，需要规模化防线</h2>
+      <div class="grid g3" style="margin-top:24px">
+        <div class="card"><div class="icon i-rose">🧩</div><h3>投毒手段隐蔽</h3><p>Skill 是“代码 + 指令”的混合体，提示注入、数据外泄、恶意脚本常隐藏在说明与依赖中，肉眼难以识别。</p></div>
+        <div class="card"><div class="icon i-amber">⚙️</div><h3>人工审查不可规模化</h3><p>Skill 数量快速增长，CI 流水线与安装流程需要自动化、可重复的安全门禁。</p></div>
+        <div class="card"><div class="icon i-indigo">📐</div><h3>缺少统一标准</h3><p>缺乏一致的风险评分、修复建议与可审计报告，安全结论难以量化与追溯。</p></div>
+      </div>
+      <p class="lead" style="margin-top:30px;color:var(--accent);font-weight:600">在 Skill 被安装 / 运行之前，完成检测、评分与拦截。</p>
+    </div>
+    <div class="foot"><span>背景与痛点</span><span>02 / 10</span></div>
+  </section>
+
+  <!-- 3 value -->
+  <section class="slide">
+    <div class="inner">
+      <span class="kicker">产品定位</span>
+      <h2>一套“检测引擎 + 控制面”的开箱即用服务</h2>
+      <div class="grid g4" style="margin-top:24px">
+        <div class="card"><div class="num">17<small> 类</small></div><h3>规则覆盖</h3><p>提示注入、供应链、权限、MCP 投毒等 72 条规则。</p></div>
+        <div class="card"><div class="num">2<small> 种模式</small></div><h3>检测引擎</h3><p>纯静态扫描，或叠加 LLM 语义分析。</p></div>
+        <div class="card"><div class="num">3<small> 类接口</small></div><h3>对外交付</h3><p>HMI 人机、M2M 流水线、健康监控接口。</p></div>
+        <div class="card"><div class="num">100<small> MiB</small></div><h3>单包上限</h3><p>上传 zip 即扫，异步任务 + 门禁判定。</p></div>
+      </div>
+      <div class="grid g3" style="margin-top:20px">
+        <div class="card"><h3>🚀 自动化</h3><p>上传 Skill 包 → 风险评分 + 发现项 + 修复建议，全流程无需人工介入。</p></div>
+        <div class="card"><h3>🔌 流水线就绪</h3><p>异步提交 + 轮询 + SARIF 2.1.0，可直接接入 CI 质量门禁。</p></div>
+        <div class="card"><h3>🛡 工程级可靠</h3><p>熔断、限流、自愈、30 天留存、Prometheus 指标与健康探测。</p></div>
+      </div>
+    </div>
+    <div class="foot"><span>产品定位</span><span>03 / 10</span></div>
+  </section>
+
+  <!-- 4 architecture -->
+  <section class="slide">
+    <div class="inner">
+      <span class="kicker">系统架构</span>
+      <h2>控制面与检测引擎解耦，数据以 PostgreSQL 为事实来源</h2>
+      <pre class="mermaid">
+flowchart LR
+    FE["前端页面<br/>HMI"] --> S
+    CI["流水线 / CI<br/>M2M"] --> S
+    S["SkillDetectServer<br/>Spring Boot 控制面"] --> PG[("PostgreSQL<br/>事实来源")]
+    S --> RD[("Redis<br/>任务队列")]
+    S --> VOL[("共享卷 /data")]
+    S -->|"POST /v1/scan"| E["skillspector-engine<br/>FastAPI 薄封装"]
+    E --> CORE["SkillSpector 检测核心"]
+    CORE --> LLM["内部 OpenAI 网关<br/>（可选）"]
+    E --> VOL
+      </pre>
+      <p class="lead" style="margin-top:14px">引擎只负责“检测”、无业务状态，可独立扩缩容与升级；Server 负责 API、编排、持久化与报告。</p>
+    </div>
+    <div class="foot"><span>系统架构</span><span>04 / 10</span></div>
+  </section>
+
+  <!-- 5 rules -->
+  <section class="slide">
+    <div class="inner">
+      <span class="kicker">检测能力</span>
+      <h2>17 大类 72 条规则，覆盖 Skill 投毒关键风险</h2>
+      <div class="cloud">
+        <span class="tag hot">Prompt Injection</span>
+        <span class="tag hot">Data Exfiltration</span>
+        <span class="tag hot">Supply Chain</span>
+        <span class="tag">Anti-Refusal</span>
+        <span class="tag">Privilege Escalation</span>
+        <span class="tag">Excessive Agency</span>
+        <span class="tag">Output Handling</span>
+        <span class="tag">System Prompt Leakage</span>
+        <span class="tag">Memory Poisoning</span>
+        <span class="tag">Tool Misuse</span>
+        <span class="tag">Rogue Agent</span>
+        <span class="tag">Trigger Abuse</span>
+        <span class="tag">Behavioral AST</span>
+        <span class="tag">Taint Tracking</span>
+        <span class="tag">YARA Signatures</span>
+        <span class="tag hot">MCP Least Privilege</span>
+        <span class="tag hot">MCP Tool Poisoning</span>
+      </div>
+      <div class="grid g3" style="margin-top:26px">
+        <div class="card"><h3>静态规则</h3><p>正则 / AST / 污点追踪 / YARA 恶意样本匹配，不依赖 LLM 即可发现确定性风险。</p></div>
+        <div class="card"><h3>语义分析（可选）</h3><p>LLM 判定开发者意图与行为-描述偏差，并诚实呈现 <code>llm_used</code> 真实状态。</p></div>
+        <div class="card"><h3>风险评分</h3><p>输出 0-100 风险分、严重级别、安全建议与可配置门禁 <code>pass/fail</code>。</p></div>
+      </div>
+    </div>
+    <div class="foot"><span>检测能力</span><span>05 / 10</span></div>
+  </section>
+
+  <!-- 6 api -->
+  <section class="slide">
+    <div class="inner">
+      <span class="kicker">对外 API</span>
+      <h2>三类接口，覆盖人机、流水线与运维</h2>
+      <div class="grid g3" style="margin-top:24px">
+        <div class="card">
+          <div class="icon i-indigo">🖥️</div>
+          <h3>HMI · 人机交互</h3>
+          <table>
+            <tr><td><code>POST /api/v1/scans</code></td><td>上传 zip 创建扫描</td></tr>
+            <tr><td><code>GET /api/v1/scans/{id}</code></td><td>状态 / 结论摘要</td></tr>
+            <tr><td><code>GET /api/v1/scans/{id}/report</code></td><td>JSON / Markdown 报告</td></tr>
+            <tr><td><code>GET /api/v1/rules</code></td><td>规则目录</td></tr>
+            <tr><td><code>POST/GET /api/v1/baselines</code></td><td>基线 / 误报抑制</td></tr>
+          </table>
+        </div>
+        <div class="card">
+          <div class="icon i-green">🔗</div>
+          <h3>M2M · 流水线</h3>
+          <table>
+            <tr><td><code>POST /api/m2m/v1/scans</code></td><td>异步创建扫描</td></tr>
+            <tr><td><code>GET /api/m2m/v1/scans/{id}</code></td><td>轮询结果</td></tr>
+            <tr><td><code>GET .../report/sarif</code></td><td>SARIF 2.1.0 报告</td></tr>
+            <tr><td><code>POST .../cancel</code></td><td>取消扫描</td></tr>
+            <tr><td><code>POST .../retry</code></td><td>失败 / 取消重试</td></tr>
+          </table>
+        </div>
+        <div class="card">
+          <div class="icon i-amber">📡</div>
+          <h3>健康 &amp; 监控</h3>
+          <table>
+            <tr><td><code>GET /healthz</code></td><td>存活探测</td></tr>
+            <tr><td><code>GET /readyz</code></td><td>就绪探测</td></tr>
+            <tr><td><code>GET /api/v1/engine/health</code></td><td>引擎健康详情</td></tr>
+            <tr><td><code>GET /actuator/prometheus</code></td><td>Prometheus 指标</td></tr>
+          </table>
+          <p style="margin-top:12px">统一响应：<code>{code, message, requestId, data}</code></p>
+        </div>
+      </div>
+    </div>
+    <div class="foot"><span>对外 API</span><span>06 / 10</span></div>
+  </section>
+
+  <!-- 7 usage -->
+  <section class="slide">
+    <div class="inner">
+      <span class="kicker">使用方式</span>
+      <h2>三步即可接入</h2>
+      <div class="grid g3" style="margin-top:24px">
+        <div class="card"><div class="num">1</div><h3>配置</h3><p>复制 <code>.env.example</code>，按需填写内部 LLM 网关（纯静态可跳过）。</p></div>
+        <div class="card"><div class="num">2</div><h3>启动</h3><p><code>docker compose up --build -d</code> 一键拉起服务与基础设施。</p></div>
+        <div class="card"><div class="num">3</div><h3>扫描</h3><p>上传 Skill zip，轮询结果或直接下载 SARIF 接入流水线门禁。</p></div>
+      </div>
+      <pre style="margin-top:26px"><code># 冒烟测试：一个良性 skill 包
+printf -- '---\nname: demo\ndescription: demo\n---\n# demo\n' > /tmp/skill-test/SKILL.md
+(cd /tmp/skill-test &amp;&amp; zip -r ../skill-test.zip .)
+
+curl -F "file=@/tmp/skill-test.zip" -F "useLlm=false" http://localhost:8080/api/v1/scans
+curl -F "file=@/tmp/skill-test.zip" -F "useLlm=false" http://localhost:8080/api/m2m/v1/scans</code></pre>
+    </div>
+    <div class="foot"><span>使用方式</span><span>07 / 10</span></div>
+  </section>
+
+  <!-- 8 reliability -->
+  <section class="slide">
+    <div class="inner">
+      <span class="kicker">可靠 · 可观测 · 安全</span>
+      <h2>面向生产的设计</h2>
+      <div class="grid g3" style="margin-top:24px">
+        <div class="card"><div class="icon i-green">🛡️</div><h3>可靠性</h3><p>PostgreSQL 事实来源、启动对账自愈、引擎熔断、失败重试、任务可取消、30 天留存清理。</p></div>
+        <div class="card"><div class="icon i-indigo">📈</div><h3>可观测</h3><p><code>healthz / readyz / engine/health</code> 三级健康，Prometheus 队列深度指标，引擎健康历史留痕。</p></div>
+        <div class="card"><div class="icon i-amber">🔐</div><h3>安全（预留）</h3><p>HMI 走 SSO/OIDC，M2M 走 API Key（仅存哈希），引擎内部 token；按开关灰度启用。</p></div>
+      </div>
+      <div class="card" style="margin-top:20px">
+        <h3>关键配置一览</h3>
+        <div class="grid g4" style="gap:12px">
+          <div><div class="num" style="font-size:26px">8</div><p>扫描并发</p></div>
+          <div><div class="num" style="font-size:26px">720s</div><p>引擎调用超时</p></div>
+          <div><div class="num" style="font-size:26px">120 / 60</div><p>HMI/M2M 每分钟限流</p></div>
+          <div><div class="num" style="font-size:26px">50</div><p>默认风险阈值</p></div>
+        </div>
+      </div>
+    </div>
+    <div class="foot"><span>可靠 · 可观测 · 安全</span><span>08 / 10</span></div>
+  </section>
+
+  <!-- 9 status -->
+  <section class="slide">
+    <div class="inner">
+      <span class="kicker">交付进度</span>
+      <h2>核心链路已闭环，安全能力按规划接入</h2>
+      <div class="timeline">
+        <div class="tl done"><h4>P0 · 核心</h4><p>异步扫描、HMI/M2M、健康、SARIF —— 已验证。</p></div>
+        <div class="tl done"><h4>P1 · 增强</h4><p>LLM 接入、规则目录、重试、留存 —— 已验证。</p></div>
+        <div class="tl done"><h4>P2 · 工程化</h4><p>基线、限流、熔断、监控、深探健康 —— 已实现。</p></div>
+        <div class="tl now"><h4>P2 · 鉴权</h4><p>SSO / API Key 设计已定，开关化待接入。</p></div>
+        <div class="tl next"><h4>后续</h4><p>K8s、Stream 队列、引擎异步化。</p></div>
+      </div>
+      <p class="lead" style="margin-top:24px">完整 OpenAPI、DDL、Redis 队列契约、鉴权设计均已沉淀在仓库 <code>docs/</code> 与 <code>SkillDetectServer/docs/</code>。</p>
+    </div>
+    <div class="foot"><span>交付进度</span><span>09 / 10</span></div>
+  </section>
+
+  <!-- 10 end -->
+  <section class="slide end">
+    <div class="inner" style="text-align:center">
+      <div class="brand" style="color:#c7d2fe;letter-spacing:3px;font-size:13px">THANK YOU</div>
+      <h1 style="margin-top:16px">让 Skill 安装前，先过安全关</h1>
+      <p class="lead" style="margin-left:auto;margin-right:auto">欢迎交流与接入 · Q&amp;A</p>
+      <div class="cloud" style="justify-content:center">
+        <span class="tag">检测引擎 SkillSpector 2.9.6</span>
+        <span class="tag">Apache-2.0</span>
+        <span class="tag">Spring Boot 3.3.5</span>
+      </div>
+    </div>
+    <div class="foot"><span>Skill Poisoning Detection Service</span><span>v0.1.0</span></div>
+  </section>
+
+  <button class="nav prev" id="prev" aria-label="上一页">‹</button>
+  <button class="nav next" id="next" aria-label="下一页">›</button>
+  <div class="dots" id="dots" style="position:absolute;bottom:26px;left:50%;transform:translateX(-50%);z-index:7"></div>
+</div>
+
+<script>
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const dotsWrap = document.getElementById('dots');
+  let idx = 0;
+  slides.forEach((_, i) => {
+    const d = document.createElement('i');
+    d.addEventListener('click', () => go(i));
+    dotsWrap.appendChild(d);
+  });
+  const dots = Array.from(dotsWrap.children);
+
+  function go(n) {
+    idx = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach((s, i) => s.classList.toggle('active', i === idx));
+    dots.forEach((d, i) => d.classList.toggle('on', i === idx));
+    document.getElementById('prev').classList.toggle('hidden', idx === 0);
+    document.getElementById('next').classList.toggle('hidden', idx === slides.length - 1);
+  }
+  document.getElementById('prev').addEventListener('click', () => go(idx - 1));
+  document.getElementById('next').addEventListener('click', () => go(idx + 1));
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(idx + 1); }
+    if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); go(idx - 1); }
+    if (e.key === 'Home') go(0);
+    if (e.key === 'End') go(slides.length - 1);
+  });
+
+  mermaid.initialize({ startOnLoad: true, theme: 'base', securityLevel: 'loose',
+    themeVariables: {
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif',
+      primaryColor: '#eef2ff', primaryTextColor: '#151a2d', primaryBorderColor: '#6366f1',
+      lineColor: '#6b7280', secondaryColor: '#f8fafc', tertiaryColor: '#ffffff'
+    }
+  });
+  go(0);
+</script>
+</body>
+</html>
