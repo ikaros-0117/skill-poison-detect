@@ -94,6 +94,9 @@ public class ScanExecutionService {
             e.setSeverity(asString(f.get("severity")));
             e.setCategory(asString(f.get("category")));
             e.setPattern(asString(f.get("pattern")));
+            // The engine folds the human-readable message into "explanation"
+            // when no separate message is present; surface it as message too.
+            e.setMessage(asString(f.get("explanation")));
             e.setExplanation(asString(f.get("explanation")));
             e.setRemediation(asString(f.get("remediation")));
             e.setConfidence(asDouble(f.get("confidence")));

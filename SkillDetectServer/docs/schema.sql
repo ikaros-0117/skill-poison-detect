@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS scan_finding (
     rule_id         VARCHAR(32)   NOT NULL,               -- e.g. PI1, AST1, YR1
     severity        VARCHAR(16)   NOT NULL,               -- LOW | MEDIUM | HIGH | CRITICAL
     category        VARCHAR(64),
-    pattern         VARCHAR(64),
+    pattern         TEXT,
     file            VARCHAR(1024),
     start_line      INT,
     end_line        INT,
@@ -72,7 +72,7 @@ CREATE TABLE IF NOT EXISTS scan_finding (
     remediation     TEXT,
     confidence      DOUBLE,
     matched_text    TEXT,
-    fingerprint     VARCHAR(128),
+    fingerprint     VARCHAR(256),
     source_url      TEXT,
     transitive_depth INT,
     created_at      DATETIME(3)   NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
