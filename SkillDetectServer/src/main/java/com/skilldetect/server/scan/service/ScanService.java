@@ -31,6 +31,8 @@ import com.skilldetect.server.scan.queue.ScanQueueService;
 @Service
 public class ScanService {
 
+    private static final int MAX_PAGE_SIZE = 100;
+
     private final ScanTaskMapper taskMapper;
     private final ScanFindingMapper findingMapper;
     private final ScanQueueService queueService;
@@ -140,6 +142,7 @@ public class ScanService {
     }
 
     public ScanDtos.Page<ScanDtos.Task> listTasks(int page, int size) {
+        validatePage(page, size);
         Page<ScanTaskEntity> result = taskMapper.selectPage(
                 new Page<>(page, size),
                 new LambdaQueryWrapper<ScanTaskEntity>().orderByDesc(ScanTaskEntity::getCreatedAt));
@@ -152,6 +155,7 @@ public class ScanService {
 
     public ScanDtos.Page<Finding> listFindings(String taskNo, int page, int size,
                                                String severity, String ruleId, String category) {
+        validatePage(page, size);
         ScanTaskEntity task = requireTask(taskNo);
         LambdaQueryWrapper<ScanFindingEntity> query = new LambdaQueryWrapper<>();
         query.eq(ScanFindingEntity::getTaskId, task.getId());
@@ -182,7 +186,7 @@ public class ScanService {
                 f.getFile(),
                 f.getStartLine(),
                 f.getEndLine(),
-                f.getExplanation(),
+                f.getMessage(),
                 f.getExplanation(),
                 f.getRemediation(),
                 f.getConfidence(),
@@ -211,6 +215,16 @@ public class ScanService {
         task.setStatus(ScanStatus.CANCELED.name());
         task.setFinishedAt(LocalDateTime.now());
         taskMapper.updateById(task);
+    }
+
+    private void validatePage(int page, int size) {
+        if (page < 1) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST, 40005, "page 必须 >= 1");
+        }
+        if (size < 1 || size > MAX_PAGE_SIZE) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST, 40006,
+                    "size 必须在 1.." + MAX_PAGE_SIZE + " 之间");
+        }
     }
 
     private Optional<ScanTaskEntity> findByTaskNo(String taskNo) {

@@ -105,7 +105,7 @@ CREATE TABLE IF NOT EXISTS api_credential (
     id          BIGINT        NOT NULL AUTO_INCREMENT PRIMARY KEY,
     name        VARCHAR(128)  NOT NULL,
     key_hash    VARCHAR(128)  NOT NULL UNIQUE,   -- only store hash, never plaintext
-    scopes      JSON          NOT NULL,          -- JSON array of scopes
+    scopes      JSON          NOT NULL DEFAULT (JSON_ARRAY()), -- JSON array of scopes
     enabled     BOOLEAN       NOT NULL DEFAULT TRUE,
     expires_at  DATETIME(3),
     created_at  DATETIME(3)   NOT NULL DEFAULT CURRENT_TIMESTAMP(3),

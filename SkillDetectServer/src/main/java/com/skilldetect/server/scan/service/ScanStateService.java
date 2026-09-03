@@ -69,39 +69,59 @@ public class ScanStateService {
     }
 
     @Transactional
-    public ScanTaskEntity saveResult(String taskNo, EngineScanResponse result, String reportPath) {
+    public void completeSuccess(String taskNo, EngineScanResponse result, String reportPath,
+                                List<ScanFindingEntity> findings) {
         ScanTaskEntity task = findByTaskNo(taskNo).orElseThrow(
                 () -> new BusinessException(HttpStatus.NOT_FOUND, 40401, "任务不存在: " + taskNo));
         if (!ScanStatus.RUNNING.name().equals(task.getStatus())) {
-            return task; // cancelled or timed out by reconciler; ignore late result
+            return; // cancelled or timed out by reconciler; ignore late result
         }
-        int threshold = task.getRiskThreshold() != null ? task.getRiskThreshold() : properties.getRiskThreshold();
-        task.setRiskScore(result.getRiskScore());
-        task.setSeverity(result.getSeverity());
-        task.setRecommendation(result.getRecommendation());
-        task.setSafeToInstall(result.getSafeToInstall());
-        task.setExecutionSuccessful(result.getExecutionSuccessful());
-        task.setLlmUsed(result.getLlmUsed());
-        task.setScanMode(result.getScanMode());
-        task.setEngineScanId(result.getEngineScanId());
 
+        int threshold = task.getRiskThreshold() != null ? task.getRiskThreshold() : properties.getRiskThreshold();
+        Boolean analysisComplete = null;
+        Integer entirelyUninspectedFiles = null;
         Map<String, Object> completeness = result.getAnalysisCompleteness();
         if (completeness != null) {
-            task.setAnalysisComplete(asBoolean(completeness.get("is_complete")));
-            task.setEntirelyUninspectedFiles(asInt(completeness.get("entirely_uninspected_files")));
+            analysisComplete = asBoolean(completeness.get("is_complete"));
+            entirelyUninspectedFiles = asInt(completeness.get("entirely_uninspected_files"));
         }
 
         boolean pass = result.getRiskScore() != null
                 && result.getRiskScore() <= threshold
                 && Boolean.TRUE.equals(result.getExecutionSuccessful())
-                && Boolean.TRUE.equals(task.getAnalysisComplete())
-                && (task.getEntirelyUninspectedFiles() == null || task.getEntirelyUninspectedFiles() == 0);
-        task.setPass(pass);
-        task.setReportPath(reportPath);
-        task.setStatus(ScanStatus.SUCCEEDED.name());
-        task.setFinishedAt(LocalDateTime.now());
-        taskMapper.updateById(task);
-        return task;
+                && Boolean.TRUE.equals(analysisComplete)
+                && (entirelyUninspectedFiles == null || entirelyUninspectedFiles == 0);
+
+        LambdaUpdateWrapper<ScanTaskEntity> update = new LambdaUpdateWrapper<>();
+        update.eq(ScanTaskEntity::getTaskNo, taskNo)
+                .eq(ScanTaskEntity::getStatus, ScanStatus.RUNNING.name())
+                .set(ScanTaskEntity::getStatus, ScanStatus.SUCCEEDED.name())
+                .set(ScanTaskEntity::getRiskScore, result.getRiskScore())
+                .set(ScanTaskEntity::getSeverity, result.getSeverity())
+                .set(ScanTaskEntity::getRecommendation, result.getRecommendation())
+                .set(ScanTaskEntity::getSafeToInstall, result.getSafeToInstall())
+                .set(ScanTaskEntity::getPass, pass)
+                .set(ScanTaskEntity::getExecutionSuccessful, result.getExecutionSuccessful())
+                .set(ScanTaskEntity::getLlmUsed, result.getLlmUsed())
+                .set(ScanTaskEntity::getScanMode, result.getScanMode())
+                .set(ScanTaskEntity::getEngineScanId, result.getEngineScanId())
+                .set(ScanTaskEntity::getAnalysisComplete, analysisComplete)
+                .set(ScanTaskEntity::getEntirelyUninspectedFiles, entirelyUninspectedFiles)
+                .set(ScanTaskEntity::getReportPath, reportPath)
+                .set(ScanTaskEntity::getErrorCode, null)
+                .set(ScanTaskEntity::getErrorMsg, null)
+                .set(ScanTaskEntity::getFinishedAt, LocalDateTime.now());
+        int updated = taskMapper.update(null, update);
+        if (updated == 0) {
+            return; // lost race with cancel/timeout; ignore late result
+        }
+
+        if (findings != null && !findings.isEmpty()) {
+            for (ScanFindingEntity finding : findings) {
+                finding.setTaskId(task.getId());
+                findingMapper.insert(finding);
+            }
+        }
     }
 
     @Transactional
@@ -140,15 +160,6 @@ public class ScanStateService {
         taskMapper.update(null, update);
     }
 
-    @Transactional
-    public void saveFindings(Long taskId, List<ScanFindingEntity> findings) {
-        if (findings != null) {
-            for (ScanFindingEntity finding : findings) {
-                finding.setTaskId(taskId);
-                findingMapper.insert(finding);
-            }
-        }
-    }
 
     private Optional<ScanTaskEntity> findByTaskNo(String taskNo) {
         return Optional.ofNullable(taskMapper.selectOne(

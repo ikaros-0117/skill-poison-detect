@@ -75,8 +75,7 @@ public class ScanExecutionService {
                     running.getSourcePath(), running.isUseLlm(), format, baselineContent);
 
             String reportPath = fileStorage.writeReport(taskNo, result.getReport(), format);
-            ScanTaskEntity updated = stateService.saveResult(taskNo, result, reportPath);
-            stateService.saveFindings(updated.getId(), mapFindings(result));
+            stateService.completeSuccess(taskNo, result, reportPath, mapFindings(result));
         } catch (Exception ex) {
             log.warn("scan failed taskNo={}: {}", taskNo, ex.getMessage());
             stateService.markFailed(taskNo, "ENGINE_ERROR", ex.getMessage());

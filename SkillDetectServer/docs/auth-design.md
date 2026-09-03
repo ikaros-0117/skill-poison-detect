@@ -34,7 +34,7 @@
 - 方案：自定义 `OncePerRequestFilter`，校验请求头 `X-API-Key`。
 - 密钥存储：`api_credential` 表（只存哈希，不存明文）：
   - `key_hash = sha256(secret)`，查询按 hash 匹配；
-  - `scopes text[]`（如 `scan:create`、`scan:read`）；
+  - `scopes JSON`（默认 `[]`，如 `["scan:create", "scan:read"]`）；
   - `enabled`、`expires_at`。
 - 校验流程：取头 → 归一化 → hash → 查表 → 校验启用/过期/scope → 写入 `SecurityContext`。
 - 密钥管理：提供 `/api/m2m/v1/credentials`（或运维接口）创建/吊销 key；创建时明文只返回一次。
