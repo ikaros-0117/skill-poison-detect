@@ -5,20 +5,13 @@ spring:
   application:
     name: skilldetect-server
   datasource:
-    url: jdbc:postgresql://localhost:5432/skilldetect
+    url: jdbc:mysql://localhost:3306/skilldetect?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
     username: skilldetect
     password: skilldetect
-  jpa:
-    hibernate:
-      ddl-auto: update
-    open-in-view: false
-    properties:
-      hibernate:
-        format_sql: false
-  data:
-    redis:
-      host: localhost
-      port: 6379
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  redis:
+    host: localhost
+    port: 6379
   servlet:
     multipart:
       max-file-size: 100MB
@@ -29,6 +22,14 @@ management:
     web:
       exposure:
         include: health,info,prometheus
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+  global-config:
+    db-config:
+      id-type: auto
 
 scan:
   risk-threshold: 50

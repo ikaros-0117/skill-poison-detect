@@ -1,20 +1,24 @@
 package com.skilldetect.server.engine;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
 
 @Component
 public class EngineClient {
 
-    private final RestClient restClient;
+    private final RestTemplate restTemplate;
     private final EngineCircuitBreaker circuitBreaker;
 
-    public EngineClient(RestClient engineRestClient, EngineCircuitBreaker circuitBreaker) {
-        this.restClient = engineRestClient;
+    public EngineClient(RestTemplate engineRestTemplate, EngineCircuitBreaker circuitBreaker) {
+        this.restTemplate = engineRestTemplate;
         this.circuitBreaker = circuitBreaker;
     }
 
@@ -23,21 +27,18 @@ public class EngineClient {
         if (!circuitBreaker.allowRequest()) {
             throw new EngineCircuitOpenException("engine circuit breaker is open");
         }
-        Map<String, Object> body = new java.util.LinkedHashMap<>();
+        Map<String, Object> body = new LinkedHashMap<>();
         body.put("path", path);
         body.put("use_llm", useLlm);
         body.put("output_format", outputFormat);
-        if (baselineContent != null && !baselineContent.isBlank()) {
+        if (baselineContent != null && !baselineContent.trim().isEmpty()) {
             body.put("baseline", baselineContent);
         }
         try {
-            EngineScanResponse response = restClient.post()
-                    .uri("/v1/scan")
-                    .body(body)
-                    .retrieve()
-                    .body(EngineScanResponse.class);
+            ResponseEntity<EngineScanResponse> response =
+                    restTemplate.postForEntity("/v1/scan", body, EngineScanResponse.class);
             circuitBreaker.recordSuccess();
-            return response;
+            return response.getBody();
         } catch (RestClientException ex) {
             circuitBreaker.recordFailure();
             throw ex;
@@ -46,34 +47,50 @@ public class EngineClient {
 
     public Map<String, Object> health() {
         try {
-            return restClient.get()
-                    .uri("/health")
-                    .retrieve()
-                    .body(new ParameterizedTypeReference<Map<String, Object>>() {});
+            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                    "/health",
+                    HttpMethod.GET,
+                    null,
+                    new ParameterizedTypeReference<Map<String, Object>>() {});
+            return response.getBody();
         } catch (RestClientException ex) {
-            return Map.of("status", "DOWN", "error", ex.getMessage());
+            return errorMap("DOWN", ex.getMessage());
         }
     }
 
     public Map<String, Object> healthDeep() {
         try {
-            return restClient.get()
-                    .uri("/health/deep?timeout=30")
-                    .retrieve()
-                    .body(new ParameterizedTypeReference<Map<String, Object>>() {});
+            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                    "/health/deep?timeout=30",
+                    HttpMethod.GET,
+                    null,
+                    new ParameterizedTypeReference<Map<String, Object>>() {});
+            return response.getBody();
         } catch (RestClientException ex) {
-            return Map.of("status", "DOWN", "error", ex.getMessage());
+            return errorMap("DOWN", ex.getMessage());
         }
     }
 
     public Map<String, Object> cancel(String engineScanId) {
         try {
-            return restClient.post()
-                    .uri(uriBuilder -> uriBuilder.path("/v1/scan/cancel").queryParam("scan_id", engineScanId).build())
-                    .retrieve()
-                    .body(new ParameterizedTypeReference<Map<String, Object>>() {});
+            String uri = UriComponentsBuilder.fromPath("/v1/scan/cancel")
+                    .queryParam("scan_id", engineScanId)
+                    .toUriString();
+            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                    uri,
+                    HttpMethod.POST,
+                    null,
+                    new ParameterizedTypeReference<Map<String, Object>>() {});
+            return response.getBody();
         } catch (RestClientException ex) {
-            return Map.of("status", "ERROR", "error", ex.getMessage());
+            return errorMap("ERROR", ex.getMessage());
         }
+    }
+
+    private Map<String, Object> errorMap(String status, String error) {
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("status", status);
+        map.put("error", error);
+        return map;
     }
 }

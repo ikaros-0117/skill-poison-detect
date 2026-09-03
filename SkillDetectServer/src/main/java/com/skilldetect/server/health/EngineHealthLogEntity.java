@@ -1,45 +1,41 @@
 package com.skilldetect.server.health;
 
-import java.time.Instant;
+import java.time.LocalDateTime;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 
-@Entity
-@Table(name = "engine_health_log")
+@TableName("engine_health_log")
 public class EngineHealthLogEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
-    @Column(name = "engine_version", length = 32)
+    @TableField("engine_version")
     private String engineVersion;
 
-    @Column(name = "provider", length = 32)
+    @TableField("provider")
     private String provider;
 
-    @Column(name = "llm_available")
+    @TableField("llm_available")
     private Boolean llmAvailable;
 
-    @Column(name = "active_scans")
+    @TableField("active_scans")
     private Integer activeScans;
 
-    @Column(name = "queue_depth")
+    @TableField("queue_depth")
     private Integer queueDepth;
 
-    @Column(name = "latency_ms")
+    @TableField("latency_ms")
     private Integer latencyMs;
 
-    @Column(name = "status", length = 16)
+    @TableField("status")
     private String status;
 
-    @Column(name = "checked_at", nullable = false)
-    private Instant checkedAt = Instant.now();
+    @TableField("checked_at")
+    private LocalDateTime checkedAt = LocalDateTime.now();
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -57,6 +53,6 @@ public class EngineHealthLogEntity {
     public void setLatencyMs(Integer latencyMs) { this.latencyMs = latencyMs; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
-    public Instant getCheckedAt() { return checkedAt; }
-    public void setCheckedAt(Instant checkedAt) { this.checkedAt = checkedAt; }
+    public LocalDateTime getCheckedAt() { return checkedAt; }
+    public void setCheckedAt(LocalDateTime checkedAt) { this.checkedAt = checkedAt; }
 }

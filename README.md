@@ -13,7 +13,7 @@
 flowchart LR
     FE[前端页面] --> SRV
     CI[流水线] --> SRV
-    SRV[SkillDetectServer<br/>Spring Boot] --> PG[(PostgreSQL 主库)]
+    SRV[SkillDetectServer<br/>Spring Boot] --> DB[(MySQL 主库)]
     SRV --> RED[(Redis 任务队列)]
     SRV --> ENG[skillspector-engine<br/>FastAPI + SkillSpector]
     SRV --> VOL[(共享卷 /data<br/>zip 与报告)]
@@ -21,7 +21,7 @@ flowchart LR
     ENG --> LLM[内部 OpenAI 兼容网关]
 ```
 
-- PostgreSQL 是任务/发现项/基线/凭据的**事实来源**；Redis 是**任务队列**（P0 用 List，P1 可选 Stream）。
+- MySQL 是任务/发现项/基线/凭据的**事实来源**；Redis 是**任务队列**（P0 用 List，P1 可选 Stream）。
 - 引擎独立部署，Server 通过 HTTP 同步调用 `POST /v1/scan`，`max-active` 控制有界并发（默认 8）。
 - 上传 zip 落共享卷 `/data/<taskNo>/input.zip`，引擎直接扫描该路径（SkillSpector 支持 zip）。
 
@@ -29,7 +29,7 @@ flowchart LR
 
 ```
 .
-├── docker-compose.yml          # 一键编排 engine/server/postgres/redis + 共享卷
+├── docker-compose.yml          # 一键编排 engine/server/mysql/redis + 共享卷
 ├── .env / .env.example         # LLM 网关配置（需填写）
 ├── SkillDetectServer/          # Spring Boot 控制面
 │   ├── src/main/java/com/skilldetect/server/

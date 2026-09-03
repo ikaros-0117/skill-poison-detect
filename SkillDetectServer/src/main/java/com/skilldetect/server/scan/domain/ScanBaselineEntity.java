@@ -1,42 +1,38 @@
 package com.skilldetect.server.scan.domain;
 
-import java.time.Instant;
+import java.time.LocalDateTime;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 
-@Entity
-@Table(name = "scan_baseline")
+@TableName("scan_baseline")
 public class ScanBaselineEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
-    @Column(name = "name", nullable = false, length = 128)
+    @TableField("name")
     private String name;
 
-    @Column(name = "content", nullable = false, columnDefinition = "text")
+    @TableField("content")
     private String content;
 
-    @Column(name = "format", nullable = false, length = 8)
+    @TableField("format")
     private String format = "yaml";
 
-    @Column(name = "version", length = 32)
+    @TableField("version")
     private String version;
 
-    @Column(name = "created_by", length = 128)
+    @TableField("created_by")
     private String createdBy;
 
-    @Column(name = "created_at", nullable = false)
-    private Instant createdAt = Instant.now();
+    @TableField("created_at")
+    private LocalDateTime createdAt = LocalDateTime.now();
 
-    @Column(name = "updated_at", nullable = false)
-    private Instant updatedAt = Instant.now();
+    @TableField("updated_at")
+    private LocalDateTime updatedAt = LocalDateTime.now();
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -50,8 +46,8 @@ public class ScanBaselineEntity {
     public void setVersion(String version) { this.version = version; }
     public String getCreatedBy() { return createdBy; }
     public void setCreatedBy(String createdBy) { this.createdBy = createdBy; }
-    public Instant getCreatedAt() { return createdAt; }
-    public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
-    public Instant getUpdatedAt() { return updatedAt; }
-    public void setUpdatedAt(Instant updatedAt) { this.updatedAt = updatedAt; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 }

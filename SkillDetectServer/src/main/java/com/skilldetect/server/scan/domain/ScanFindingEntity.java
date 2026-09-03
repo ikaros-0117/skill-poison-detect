@@ -1,75 +1,71 @@
 package com.skilldetect.server.scan.domain;
 
-import java.time.Instant;
+import java.time.LocalDateTime;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 
-@Entity
-@Table(name = "scan_finding")
+@TableName("scan_finding")
 public class ScanFindingEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
-    @Column(name = "task_id", nullable = false)
+    @TableField("task_id")
     private Long taskId;
 
-    @Column(name = "finding_id", nullable = false, length = 64)
+    @TableField("finding_id")
     private String findingId;
 
-    @Column(name = "rule_id", nullable = false, length = 32)
+    @TableField("rule_id")
     private String ruleId;
 
-    @Column(name = "severity", nullable = false, length = 16)
+    @TableField("severity")
     private String severity;
 
-    @Column(name = "category", length = 64)
+    @TableField("category")
     private String category;
 
-    @Column(name = "pattern", length = 64)
+    @TableField("pattern")
     private String pattern;
 
-    @Column(name = "file", length = 1024)
+    @TableField("file")
     private String file;
 
-    @Column(name = "start_line")
+    @TableField("start_line")
     private Integer startLine;
 
-    @Column(name = "end_line")
+    @TableField("end_line")
     private Integer endLine;
 
-    @Column(name = "message", columnDefinition = "text")
+    @TableField("message")
     private String message;
 
-    @Column(name = "explanation", columnDefinition = "text")
+    @TableField("explanation")
     private String explanation;
 
-    @Column(name = "remediation", columnDefinition = "text")
+    @TableField("remediation")
     private String remediation;
 
-    @Column(name = "confidence")
+    @TableField("confidence")
     private Double confidence;
 
-    @Column(name = "matched_text", columnDefinition = "text")
+    @TableField("matched_text")
     private String matchedText;
 
-    @Column(name = "fingerprint", length = 128)
+    @TableField("fingerprint")
     private String fingerprint;
 
-    @Column(name = "source_url", columnDefinition = "text")
+    @TableField("source_url")
     private String sourceUrl;
 
-    @Column(name = "transitive_depth")
+    @TableField("transitive_depth")
     private Integer transitiveDepth;
 
-    @Column(name = "created_at", nullable = false)
-    private Instant createdAt = Instant.now();
+    @TableField("created_at")
+    private LocalDateTime createdAt = LocalDateTime.now();
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -107,6 +103,6 @@ public class ScanFindingEntity {
     public void setSourceUrl(String sourceUrl) { this.sourceUrl = sourceUrl; }
     public Integer getTransitiveDepth() { return transitiveDepth; }
     public void setTransitiveDepth(Integer transitiveDepth) { this.transitiveDepth = transitiveDepth; }
-    public Instant getCreatedAt() { return createdAt; }
-    public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }

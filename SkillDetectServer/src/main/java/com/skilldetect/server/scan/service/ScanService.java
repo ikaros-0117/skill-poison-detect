@@ -1,18 +1,20 @@
 package com.skilldetect.server.scan.service;
 
-import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.jpa.domain.Specification;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.skilldetect.server.common.BusinessException;
 import com.skilldetect.server.config.ScanProperties;
 import com.skilldetect.server.scan.controller.ScanDtos;
@@ -22,30 +24,28 @@ import com.skilldetect.server.scan.controller.ScanDtos.Task;
 import com.skilldetect.server.scan.domain.ScanFindingEntity;
 import com.skilldetect.server.scan.domain.ScanStatus;
 import com.skilldetect.server.scan.domain.ScanTaskEntity;
+import com.skilldetect.server.scan.mapper.ScanFindingMapper;
+import com.skilldetect.server.scan.mapper.ScanTaskMapper;
 import com.skilldetect.server.scan.queue.ScanQueueService;
-import com.skilldetect.server.scan.repository.ScanFindingRepository;
-import com.skilldetect.server.scan.repository.ScanTaskRepository;
-
-import org.springframework.http.HttpStatus;
 
 @Service
 public class ScanService {
 
-    private final ScanTaskRepository taskRepo;
-    private final ScanFindingRepository findingRepo;
+    private final ScanTaskMapper taskMapper;
+    private final ScanFindingMapper findingMapper;
     private final ScanQueueService queueService;
     private final ScanStateService stateService;
     private final FileStorageService fileStorage;
     private final ScanProperties properties;
 
-    public ScanService(ScanTaskRepository taskRepo,
-                       ScanFindingRepository findingRepo,
+    public ScanService(ScanTaskMapper taskMapper,
+                       ScanFindingMapper findingMapper,
                        ScanQueueService queueService,
                        ScanStateService stateService,
                        FileStorageService fileStorage,
                        ScanProperties properties) {
-        this.taskRepo = taskRepo;
-        this.findingRepo = findingRepo;
+        this.taskMapper = taskMapper;
+        this.findingMapper = findingMapper;
         this.queueService = queueService;
         this.stateService = stateService;
         this.fileStorage = fileStorage;
@@ -69,7 +69,7 @@ public class ScanService {
         task.setBaselineId(baselineId);
         task.setMetadata(metadata);
         task.setStatus(ScanStatus.QUEUED.name());
-        task.setCreatedAt(Instant.now());
+        task.setCreatedAt(LocalDateTime.now());
 
         // Persist first (commits before returning), then enqueue to avoid the
         // dispatch race where a worker pops a taskNo before the row is visible.
@@ -79,12 +79,13 @@ public class ScanService {
     }
 
     public ScanTaskEntity requireTask(String taskNo) {
-        return taskRepo.findByTaskNo(taskNo)
+        return findByTaskNo(taskNo)
                 .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, 40401, "任务不存在: " + taskNo));
     }
 
     public ScanDtos.Task toDto(ScanTaskEntity task) {
-        List<ScanFindingEntity> findings = findingRepo.findByTaskId(task.getId());
+        List<ScanFindingEntity> findings = findingMapper.selectList(
+                new LambdaQueryWrapper<ScanFindingEntity>().eq(ScanFindingEntity::getTaskId, task.getId()));
         Map<String, Integer> summary = new LinkedHashMap<>();
         summary.put("CRITICAL", 0);
         summary.put("HIGH", 0);
@@ -139,28 +140,36 @@ public class ScanService {
     }
 
     public ScanDtos.Page<ScanDtos.Task> listTasks(int page, int size) {
-        Page<ScanTaskEntity> result = taskRepo.findAllByOrderByCreatedAtDesc(PageRequest.of(page - 1, size));
-        List<ScanDtos.Task> items = result.getContent().stream().map(this::toDto).toList();
-        return new ScanDtos.Page<>(items, page, size, result.getTotalElements());
+        Page<ScanTaskEntity> result = taskMapper.selectPage(
+                new Page<>(page, size),
+                new LambdaQueryWrapper<ScanTaskEntity>().orderByDesc(ScanTaskEntity::getCreatedAt));
+        List<ScanDtos.Task> items = new ArrayList<>();
+        for (ScanTaskEntity entity : result.getRecords()) {
+            items.add(toDto(entity));
+        }
+        return new ScanDtos.Page<>(items, page, size, result.getTotal());
     }
 
     public ScanDtos.Page<Finding> listFindings(String taskNo, int page, int size,
                                                String severity, String ruleId, String category) {
         ScanTaskEntity task = requireTask(taskNo);
-        Specification<ScanFindingEntity> spec = (root, query, cb) ->
-                cb.equal(root.get("taskId"), task.getId());
-        if (severity != null && !severity.isBlank()) {
-            spec = spec.and((root, query, cb) -> cb.equal(root.get("severity"), severity.toUpperCase()));
+        LambdaQueryWrapper<ScanFindingEntity> query = new LambdaQueryWrapper<>();
+        query.eq(ScanFindingEntity::getTaskId, task.getId());
+        if (StringUtils.hasText(severity)) {
+            query.eq(ScanFindingEntity::getSeverity, severity.toUpperCase());
         }
-        if (ruleId != null && !ruleId.isBlank()) {
-            spec = spec.and((root, query, cb) -> cb.equal(root.get("ruleId"), ruleId));
+        if (StringUtils.hasText(ruleId)) {
+            query.eq(ScanFindingEntity::getRuleId, ruleId);
         }
-        if (category != null && !category.isBlank()) {
-            spec = spec.and((root, query, cb) -> cb.equal(root.get("category"), category));
+        if (StringUtils.hasText(category)) {
+            query.eq(ScanFindingEntity::getCategory, category);
         }
-        Page<ScanFindingEntity> result = findingRepo.findAll(spec, PageRequest.of(page - 1, size));
-        List<Finding> items = result.getContent().stream().map(this::toFinding).toList();
-        return new ScanDtos.Page<>(items, page, size, result.getTotalElements());
+        Page<ScanFindingEntity> result = findingMapper.selectPage(new Page<>(page, size), query);
+        List<Finding> items = new ArrayList<>();
+        for (ScanFindingEntity entity : result.getRecords()) {
+            items.add(toFinding(entity));
+        }
+        return new ScanDtos.Page<>(items, page, size, result.getTotal());
     }
 
     private Finding toFinding(ScanFindingEntity f) {
@@ -200,7 +209,12 @@ public class ScanService {
             queueService.remove(taskNo);
         }
         task.setStatus(ScanStatus.CANCELED.name());
-        task.setFinishedAt(Instant.now());
-        taskRepo.save(task);
+        task.setFinishedAt(LocalDateTime.now());
+        taskMapper.updateById(task);
+    }
+
+    private Optional<ScanTaskEntity> findByTaskNo(String taskNo) {
+        return Optional.ofNullable(taskMapper.selectOne(
+                new LambdaQueryWrapper<ScanTaskEntity>().eq(ScanTaskEntity::getTaskNo, taskNo)));
     }
 }

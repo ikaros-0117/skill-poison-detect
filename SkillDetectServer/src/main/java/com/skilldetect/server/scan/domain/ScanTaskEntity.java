@@ -1,121 +1,113 @@
 package com.skilldetect.server.scan.domain;
 
-import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.Map;
 
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
-
-@Entity
-@Table(name = "scan_task")
+@TableName(value = "scan_task", autoResultMap = true)
 public class ScanTaskEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
-    @Column(name = "task_no", nullable = false, unique = true, length = 64)
+    @TableField("task_no")
     private String taskNo;
 
-    @Column(name = "source_type", nullable = false, length = 16)
+    @TableField("source_type")
     private String sourceType = "upload";
 
-    @Column(name = "source_path")
+    @TableField("source_path")
     private String sourcePath;
 
-    @Column(name = "zip_sha256", length = 64)
+    @TableField("zip_sha256")
     private String zipSha256;
 
-    @Column(name = "zip_size_bytes")
+    @TableField("zip_size_bytes")
     private Long zipSizeBytes;
 
-    @Column(name = "baseline_id")
+    @TableField("baseline_id")
     private Long baselineId;
 
-    @Column(name = "use_llm", nullable = false)
+    @TableField("use_llm")
     private boolean useLlm;
 
-    @Column(name = "risk_threshold", nullable = false)
+    @TableField("risk_threshold")
     private Integer riskThreshold = 50;
 
-    @Column(name = "status", nullable = false, length = 16)
+    @TableField("status")
     private String status = ScanStatus.QUEUED.name();
 
-    @Column(name = "risk_score")
+    @TableField("risk_score")
     private Integer riskScore;
 
-    @Column(name = "severity", length = 16)
+    @TableField("severity")
     private String severity;
 
-    @Column(name = "recommendation", length = 32)
+    @TableField("recommendation")
     private String recommendation;
 
-    @Column(name = "safe_to_install")
+    @TableField("safe_to_install")
     private Boolean safeToInstall;
 
-    @Column(name = "pass")
+    @TableField("pass")
     private Boolean pass;
 
-    @Column(name = "execution_successful")
+    @TableField("execution_successful")
     private Boolean executionSuccessful;
 
-    @Column(name = "analysis_complete")
+    @TableField("analysis_complete")
     private Boolean analysisComplete;
 
-    @Column(name = "entirely_uninspected_files")
+    @TableField("entirely_uninspected_files")
     private Integer entirelyUninspectedFiles;
 
-    @Column(name = "llm_used")
+    @TableField("llm_used")
     private Boolean llmUsed;
 
-    @Column(name = "scan_mode", length = 16)
+    @TableField("scan_mode")
     private String scanMode;
 
-    @Column(name = "engine_scan_id", length = 64)
+    @TableField("engine_scan_id")
     private String engineScanId;
 
-    @Column(name = "report_format", length = 16)
+    @TableField("report_format")
     private String reportFormat;
 
-    @Column(name = "report_path")
+    @TableField("report_path")
     private String reportPath;
 
-    @Column(name = "sarif_path")
+    @TableField("sarif_path")
     private String sarifPath;
 
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "metadata", columnDefinition = "jsonb")
+    @TableField(value = "metadata", typeHandler = JacksonTypeHandler.class)
     private Map<String, Object> metadata;
 
-    @Column(name = "error_code", length = 64)
+    @TableField("error_code")
     private String errorCode;
 
-    @Column(name = "error_msg")
+    @TableField("error_msg")
     private String errorMsg;
 
-    @Column(name = "retry_count", nullable = false)
+    @TableField("retry_count")
     private int retryCount;
 
-    @Column(name = "created_by", length = 128)
+    @TableField("created_by")
     private String createdBy;
 
-    @Column(name = "created_at", nullable = false)
-    private Instant createdAt = Instant.now();
+    @TableField("created_at")
+    private LocalDateTime createdAt = LocalDateTime.now();
 
-    @Column(name = "started_at")
-    private Instant startedAt;
+    @TableField("started_at")
+    private LocalDateTime startedAt;
 
-    @Column(name = "finished_at")
-    private Instant finishedAt;
+    @TableField("finished_at")
+    private LocalDateTime finishedAt;
 
-    // getters/setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getTaskNo() { return taskNo; }
@@ -175,10 +167,10 @@ public class ScanTaskEntity {
     public void setRetryCount(int retryCount) { this.retryCount = retryCount; }
     public String getCreatedBy() { return createdBy; }
     public void setCreatedBy(String createdBy) { this.createdBy = createdBy; }
-    public Instant getCreatedAt() { return createdAt; }
-    public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
-    public Instant getStartedAt() { return startedAt; }
-    public void setStartedAt(Instant startedAt) { this.startedAt = startedAt; }
-    public Instant getFinishedAt() { return finishedAt; }
-    public void setFinishedAt(Instant finishedAt) { this.finishedAt = finishedAt; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public LocalDateTime getStartedAt() { return startedAt; }
+    public void setStartedAt(LocalDateTime startedAt) { this.startedAt = startedAt; }
+    public LocalDateTime getFinishedAt() { return finishedAt; }
+    public void setFinishedAt(LocalDateTime finishedAt) { this.finishedAt = finishedAt; }
 }

@@ -16,7 +16,7 @@
        │ JDBC         │ Redis(List)    │ 共享卷 /data │ HTTP(同步)
        ▼              ▼                ▼              ▼
 ┌──────────────┐ ┌────────────┐ ┌──────────────┐ ┌──────────────────┐
-│ PostgreSQL   │ │ Redis      │ │ 共享卷 /data │ │ skillspector-engine│
+│ MySQL        │ │ Redis      │ │ 共享卷 /data │ │ skillspector-engine│
 │ 主库(事实来源)│ │ 任务队列    │ │ zip / 报告   │ │ FastAPI + SkillSpector│
 └──────────────┘ └────────────┘ └──────────────┘ └────────┬─────────┘
                                                           │ LLM 调用
@@ -28,7 +28,7 @@
 
 - `SkillDetectServer`：对外 API、任务编排、状态机、持久化、文件存储、结果/报告、限流/熔断/监控、健康聚合。
 - `skillspector-engine`：仅负责“检测”，调用 SkillSpector 图，返回结构化 verdict；无业务状态，可独立扩缩容/升级。
-- PostgreSQL：`scan_task` / `scan_finding` / `scan_baseline` / `api_credential`(预留) / `engine_health_log` 的事实来源。
+- MySQL：`scan_task` / `scan_finding` / `scan_baseline` / `api_credential`(预留) / `engine_health_log` 的事实来源。
 - Redis：任务队列 + 取消标记 + 限流计数；可重建、不承载持久数据。
 
 ## 2. 关键设计决策
@@ -39,7 +39,7 @@
 | 引擎调用 | 同步 `POST /v1/scan`（长连接） | MVP 简单；后续可切 submit+poll（已预留任务登记） |
 | 队列 | Redis List `LPUSH/BRPOP` | 单消费者够用；P1 可选 Stream（ack/重投） |
 | 并发 | `max-active` 个 worker 线程（默认 8） | 100 在途 = 队列容量；8 = 真正同时扫描 |
-| 事实来源 | PostgreSQL | 丢队列不丢任务，可对账重建 |
+| 事实来源 | MySQL | 丢队列不丢任务，可对账重建 |
 | 门禁判定 | Server 用 `riskThreshold` 重算 `pass` | 引擎阈值固定 50，业务阈值可配置 |
 | 鉴权 | 后置、开关化 | `security.enabled=false`，接口/数据模型已预留 |
 | 部署 | 单机 Docker Compose | 目标环境；可迁移 K8s |
@@ -63,24 +63,24 @@ PENDING → QUEUED → RUNNING → SUCCEEDED
 sequenceDiagram
     participant C as 调用方
     participant S as Server
-    participant PG as PostgreSQL
+    participant DB as MySQL
     participant R as Redis
     participant E as Engine
     participant L as LLM 网关(可选)
 
     C->>S: POST /scans (multipart zip + useLlm + baselineId?)
     S->>S: 校验 100MiB / sha256 / 落盘 /data/<taskNo>/input.zip
-    S->>PG: insert scan_task(QUEUED)
+    S->>DB: insert scan_task(QUEUED)
     S->>R: LPUSH skillscan:queue <taskNo>
     S-->>C: 202 {taskId}
 
     loop dispatcher(max-active=8)
         R-->>S: BRPOP <taskNo>
-        S->>PG: claim QUEUED→RUNNING
+        S->>DB: claim QUEUED→RUNNING
         S->>E: POST /v1/scan {path,useLlm,format,baseline?}
         E->>L: LLM 语义分析(若 useLlm)
         E-->>S: verdict + report
-        S->>PG: 写结果 + findings + baseline 应用后分数
+        S->>DB: 写结果 + findings + baseline 应用后分数
         S->>S: 写报告文件
     end
 ```
@@ -98,7 +98,7 @@ sequenceDiagram
 ## 6. 可扩展性 / 可靠性
 
 - 引擎可横向多副本；Server 用 `max-active` 限流，后续多实例时 `skillscan:active`（INCR/DECR）做全局并发。
-- 引擎重启：PostgreSQL 事实来源 + 启动对账补队列，不丢任务。
+- 引擎重启：MySQL 事实来源 + 启动对账补队列，不丢任务。
 - 长任务：引擎调用超时 12min + 周期超时兜底。
 - 熔断：引擎连续失败达到阈值即开路，半开探活恢复。
 - 限流：Redis 固定窗口按 IP 区分 HMI/M2M。

@@ -3,6 +3,9 @@ package com.skilldetect.server.scan.dispatcher;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -10,9 +13,6 @@ import org.springframework.stereotype.Component;
 import com.skilldetect.server.config.ScanProperties;
 import com.skilldetect.server.scan.queue.ScanQueueService;
 import com.skilldetect.server.scan.service.ScanExecutionService;
-
-import jakarta.annotation.PostConstruct;
-import jakarta.annotation.PreDestroy;
 
 /**
  * Bounded-parallel dispatcher: max-active worker threads each do a blocking

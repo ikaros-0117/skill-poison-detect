@@ -1,6 +1,8 @@
 package com.skilldetect.server.scan.controller;
 
 import java.io.IOException;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import org.springframework.http.HttpStatus;
@@ -40,7 +42,8 @@ public class HmiScanController {
             @RequestParam(value = "riskThreshold", required = false) Integer riskThreshold,
             @RequestParam(value = "baselineId", required = false) Long baselineId) {
         byte[] bytes = readBytes(file);
-        String taskId = scanService.create(bytes, useLlm, riskThreshold, "json", baselineId, Map.of());
+        String taskId = scanService.create(bytes, useLlm, riskThreshold, "json", baselineId,
+                Collections.<String, Object>emptyMap());
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(ApiResponse.ok(new ScanDtos.Create(taskId)));
     }
 
@@ -85,8 +88,10 @@ public class HmiScanController {
     @PostMapping("/scans/{taskId}/cancel")
     public ResponseEntity<ApiResponse<Map<String, String>>> cancel(@PathVariable String taskId) {
         scanService.cancel(taskId);
-        return ResponseEntity.status(HttpStatus.ACCEPTED)
-                .body(ApiResponse.ok(Map.of("taskId", taskId, "status", "CANCELED")));
+        Map<String, String> body = new LinkedHashMap<>();
+        body.put("taskId", taskId);
+        body.put("status", "CANCELED");
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(ApiResponse.ok(body));
     }
 
     private byte[] readBytes(MultipartFile file) {

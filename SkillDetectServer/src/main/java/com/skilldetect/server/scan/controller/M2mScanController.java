@@ -1,6 +1,8 @@
 package com.skilldetect.server.scan.controller;
 
 import java.io.IOException;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import org.springframework.http.HttpStatus;
@@ -69,15 +71,19 @@ public class M2mScanController {
     @PostMapping("/scans/{taskId}/retry")
     public ResponseEntity<ApiResponse<Map<String, String>>> retry(@PathVariable String taskId) {
         scanService.retry(taskId);
-        return ResponseEntity.status(HttpStatus.ACCEPTED)
-                .body(ApiResponse.ok(Map.of("taskId", taskId, "status", "QUEUED")));
+        Map<String, String> body = new LinkedHashMap<>();
+        body.put("taskId", taskId);
+        body.put("status", "QUEUED");
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(ApiResponse.ok(body));
     }
 
     @PostMapping("/scans/{taskId}/cancel")
     public ResponseEntity<ApiResponse<Map<String, String>>> cancel(@PathVariable String taskId) {
         scanService.cancel(taskId);
-        return ResponseEntity.status(HttpStatus.ACCEPTED)
-                .body(ApiResponse.ok(Map.of("taskId", taskId, "status", "CANCELED")));
+        Map<String, String> body = new LinkedHashMap<>();
+        body.put("taskId", taskId);
+        body.put("status", "CANCELED");
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(ApiResponse.ok(body));
     }
 
     private byte[] readBytes(MultipartFile file) {
@@ -92,8 +98,8 @@ public class M2mScanController {
     }
 
     private Map<String, Object> parseMetadata(String metadataJson) {
-        if (metadataJson == null || metadataJson.isBlank()) {
-            return Map.of();
+        if (metadataJson == null || metadataJson.trim().isEmpty()) {
+            return Collections.emptyMap();
         }
         try {
             return objectMapper.readValue(metadataJson, new TypeReference<Map<String, Object>>() {});

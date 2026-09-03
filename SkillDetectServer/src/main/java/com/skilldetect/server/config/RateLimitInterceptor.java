@@ -2,15 +2,15 @@ package com.skilldetect.server.config;
 
 import java.time.Duration;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 import com.skilldetect.server.common.BusinessException;
-
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 
 /** Redis fixed-window rate limiter keyed by client IP and API group (HMI/M2M). */
 @Component
@@ -49,7 +49,7 @@ public class RateLimitInterceptor implements HandlerInterceptor {
 
     private String clientIp(HttpServletRequest request) {
         String forwarded = request.getHeader("X-Forwarded-For");
-        if (forwarded != null && !forwarded.isBlank()) {
+        if (forwarded != null && !forwarded.trim().isEmpty()) {
             int comma = forwarded.indexOf(',');
             return (comma > 0 ? forwarded.substring(0, comma) : forwarded).trim();
         }

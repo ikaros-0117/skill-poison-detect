@@ -8,6 +8,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import com.skilldetect.server.engine.EngineClient;
+import com.skilldetect.server.health.mapper.EngineHealthLogMapper;
 import com.skilldetect.server.scan.queue.ScanQueueService;
 
 /** Periodically runs the engine deep-health probe and records the result. */
@@ -17,14 +18,14 @@ public class EngineHealthProbe {
     private static final Logger log = LoggerFactory.getLogger(EngineHealthProbe.class);
 
     private final EngineClient engineClient;
-    private final EngineHealthLogRepository logRepo;
+    private final EngineHealthLogMapper logMapper;
     private final ScanQueueService queueService;
 
     public EngineHealthProbe(EngineClient engineClient,
-                             EngineHealthLogRepository logRepo,
+                             EngineHealthLogMapper logMapper,
                              ScanQueueService queueService) {
         this.engineClient = engineClient;
-        this.logRepo = logRepo;
+        this.logMapper = logMapper;
         this.queueService = queueService;
     }
 
@@ -41,7 +42,7 @@ public class EngineHealthProbe {
         entry.setQueueDepth((int) queueService.queueSize());
         entry.setLatencyMs(asInt(deep.get("elapsed_ms")));
         entry.setStatus(asString(deep.get("status")));
-        logRepo.save(entry);
+        logMapper.insert(entry);
 
         if (!"UP".equalsIgnoreCase(entry.getStatus())) {
             log.warn("engine deep health probe status={} error={}", entry.getStatus(), deep.get("error"));
@@ -49,6 +50,6 @@ public class EngineHealthProbe {
     }
 
     private static String asString(Object v) { return v == null ? null : String.valueOf(v); }
-    private static Boolean asBoolean(Object v) { return v instanceof Boolean b ? b : null; }
-    private static Integer asInt(Object v) { return v instanceof Number n ? n.intValue() : null; }
+    private static Boolean asBoolean(Object v) { return v instanceof Boolean ? (Boolean) v : null; }
+    private static Integer asInt(Object v) { return v instanceof Number ? ((Number) v).intValue() : null; }
 }

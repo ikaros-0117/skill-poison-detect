@@ -31,7 +31,12 @@ public class HealthController {
 
     @GetMapping("/healthz")
     public ResponseEntity<Map<String, Object>> liveness() {
-        return ResponseEntity.ok(Map.of("status", "UP", "checks", Map.of("process", "UP")));
+        Map<String, Object> checks = new LinkedHashMap<>();
+        checks.put("process", "UP");
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("status", "UP");
+        body.put("checks", checks);
+        return ResponseEntity.ok(body);
     }
 
     @GetMapping("/readyz")
@@ -44,9 +49,9 @@ public class HealthController {
         checks.put("engine", engineOk ? "UP" : "DOWN");
 
         boolean ready = dbOk && engineOk;
-        Map<String, Object> body = Map.of(
-                "status", ready ? "UP" : "DOWN",
-                "checks", checks);
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("status", ready ? "UP" : "DOWN");
+        body.put("checks", checks);
         return ready
                 ? ResponseEntity.ok(body)
                 : ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(body);
@@ -55,8 +60,12 @@ public class HealthController {
     @GetMapping("/api/v1/engine/health")
     public ApiResponse<Map<String, Object>> engineHealth(@RequestParam(defaultValue = "false") boolean deep) {
         Map<String, Object> health = deep ? engineClient.healthDeep() : engineClient.health();
-        health.putIfAbsent("status", "DOWN");
-        health.putIfAbsent("version", "unknown");
+        if (!health.containsKey("status")) {
+            health.put("status", "DOWN");
+        }
+        if (!health.containsKey("version")) {
+            health.put("version", "unknown");
+        }
         health.put("queueDepth", queueService.queueSize());
         return ApiResponse.ok(health);
     }

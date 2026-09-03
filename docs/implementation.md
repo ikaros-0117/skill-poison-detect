@@ -37,15 +37,15 @@
   - `POST /v1/scan/cancel`：尽力取消（同步模式下仅登记，结果由 Server 守卫忽略）。
 - 核心：直接调用 `skillspector.graph.ainvoke`，用 `load_baseline` + `effective_findings` 应用基线，返回与 `run_scan` 一致的 verdict。
 
-## 4. 数据模型（PostgreSQL，事实来源）
+## 4. 数据模型（MySQL，事实来源）
 
-- `scan_task`：任务主表（状态机 + 结论摘要 + 报告路径 + `metadata` JSONB + `baseline_id`）。
+- `scan_task`：任务主表（状态机 + 结论摘要 + 报告路径 + `metadata` JSON + `baseline_id`）。
 - `scan_finding`：发现项（`task_id`、`rule_id`、`severity`、位置、说明、指纹）。
 - `scan_baseline`：基线（YAML/JSON 内容）。
 - `api_credential`：预留（鉴权）。
 - `engine_health_log`：深探健康历史。
 
-完整 DDL 见 `SkillDetectServer/docs/schema.sql`（`ddl-auto=update` 仅用于开发，生产建议 Flyway 对齐）。
+完整 DDL 见 `SkillDetectServer/docs/schema.sql`（Docker 首次启动时自动初始化；生产建议 Flyway/Liquibase 对齐）。
 
 ## 5. 开发过程中修复的关键问题
 

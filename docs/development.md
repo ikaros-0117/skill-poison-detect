@@ -109,7 +109,7 @@ security:
 
 | 现象 | 排查 |
 |---|---|
-| Server 启动失败连不上 DB | 确认 postgres healthy、`SPRING_DATASOURCE_URL` |
+| Server 启动失败连不上 DB | 确认 mysql healthy、`SPRING_DATASOURCE_URL` |
 | 任务卡 `QUEUED` | 看 `ScanDispatcher`/`ScanReconciler` 日志；检查 Redis `LLEN skillscan:queue` |
 | 扫描返回 `FAILED` | 看 `scan_task.error_msg` + `docker compose logs server` + engine 日志 |
 | `llm_available=false` | 检查 `.env` 的 `OPENAI_BASE_URL`/`OPENAI_API_KEY`，重建 engine 后 `curl :8000/health` |
