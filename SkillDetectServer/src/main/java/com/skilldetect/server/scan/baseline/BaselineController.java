@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import javax.validation.Valid;
 import javax.validation.constraints.NotBlank;
 
 import org.springframework.http.HttpStatus;
@@ -76,7 +77,7 @@ public class BaselineController {
     }
 
     @PostMapping
-    public ResponseEntity<ApiResponse<BaselineView>> create(@RequestBody CreateRequest request) {
+    public ResponseEntity<ApiResponse<BaselineView>> create(@Valid @RequestBody CreateRequest request) {
         ScanBaselineEntity entity = new ScanBaselineEntity();
         entity.setName(request.getName());
         entity.setContent(request.getContent());

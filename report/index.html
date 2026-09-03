@@ -143,7 +143,7 @@
       <p>面向 AI Agent Skill 的投毒 / 恶意行为安全检测后端。对上传的 Skill 包（zip）执行静态规则 + 可选 LLM 语义分析，输出风险评分、发现项与 SARIF 报告，并支撑流水线门禁。</p>
       <div class="meta">
         <span class="chip">检测引擎：SkillSpector 2.9.6（Apache-2.0）</span>
-        <span class="chip">控制面：Spring Boot 3.3.5 / Java 17</span>
+        <span class="chip">控制面：Spring Boot 2.7.18 / Java 8 / MyBatis-Plus</span>
         <span class="chip">检测规则：17 类 / 72 条</span>
         <span class="chip">部署：Docker Compose 单机</span>
       </div>
@@ -162,7 +162,7 @@
       <ul>
         <li><b>静态扫描</b>：17 大类 72 条规则，覆盖 Prompt Injection、Anti-Refusal、Data Exfiltration、Privilege Escalation、Supply Chain、YARA 恶意样本、MCP 权限/工具投毒等。</li>
         <li><b>语义分析（可选）</b>：接入内部 OpenAI 兼容网关，做行为/意图语义判定，输出静态 + LLM 双模式结论。</li>
-        <li><b>异步任务与门禁</b>：Redis 队列 + PostgreSQL 事实来源，支持并发、取消、重试、可配置风险阈值门禁（pass/fail）。</li>
+        <li><b>异步任务与门禁</b>：Redis 队列 + MySQL 事实来源，支持并发、取消、重试、可配置风险阈值门禁（pass/fail）。</li>
         <li><b>报告输出</b>：JSON / Markdown / SARIF 2.1.0，可直接对接 CI 流水线。</li>
         <li><b>工程化保障</b>：限流、引擎熔断、启动对账自愈、30 天留存清理、Prometheus 指标、健康探测。</li>
       </ul>
@@ -171,7 +171,7 @@
     <!-- 2 -->
     <section id="architecture">
       <h2><span class="num">2</span>系统架构</h2>
-      <p class="lead">控制面与检测引擎解耦，PostgreSQL 为事实来源，Redis 仅作派发通道与短期状态。</p>
+      <p class="lead">控制面与检测引擎解耦，MySQL 为事实来源，Redis 仅作派发通道与短期状态。</p>
       <pre class="mermaid">
 flowchart TB
     subgraph callers["调用方"]
@@ -185,7 +185,7 @@ flowchart TB
         ORCH["任务编排 · 状态机 · 持久化"]
     end
     subgraph infra["基础设施"]
-        PG[("PostgreSQL 主库<br/>事实来源")]
+        DB[("MySQL 主库<br/>事实来源")]
         RED[("Redis<br/>任务队列")]
         VOL[("共享卷 /data<br/>zip 与报告")]
     end
@@ -199,7 +199,7 @@ flowchart TB
     CI --> API
     OPS --> API
     API --> SEC --> ORCH
-    ORCH --> PG
+    ORCH --> DB
     ORCH --> RED
     ORCH --> VOL
     ORCH -->|"HTTP POST /v1/scan（同步长连接）"| W
@@ -213,7 +213,7 @@ flowchart TB
         <tbody>
           <tr><td><b>SkillDetectServer</b></td><td>对外 API、任务编排、状态机、持久化、文件存储、报告生成、限流/熔断/监控、健康聚合。</td></tr>
           <tr><td><b>skillspector-engine</b></td><td>仅负责“检测”：调用 SkillSpector 图，返回结构化 verdict；无业务状态，可独立扩缩容/升级。</td></tr>
-          <tr><td><b>PostgreSQL</b></td><td>scan_task / scan_finding / scan_baseline / api_credential(预留) / engine_health_log 的事实来源。</td></tr>
+          <tr><td><b>MySQL</b></td><td>scan_task / scan_finding / scan_baseline / api_credential(预留) / engine_health_log 的事实来源。</td></tr>
           <tr><td><b>Redis</b></td><td>任务队列 + 取消标记 + 限流计数；可重建，不承载持久数据。</td></tr>
         </tbody>
       </table>
@@ -225,7 +225,7 @@ flowchart TB
           <tr><td>引擎调用</td><td>同步 <code>POST /v1/scan</code>（长连接）</td><td>MVP 简单；已预留任务登记，后续可切 submit+poll。</td></tr>
           <tr><td>队列</td><td>Redis List <code>LPUSH/BRPOP</code></td><td>单消费者够用；P1 可选升级 Stream（ack/重投）。</td></tr>
           <tr><td>并发</td><td><code>max-active</code> 个 worker 线程（默认 8）</td><td>100 在途 = 队列容量；8 = 真正同时扫描数。</td></tr>
-          <tr><td>事实来源</td><td>PostgreSQL</td><td>丢队列不丢任务，可对账重建。</td></tr>
+          <tr><td>事实来源</td><td>MySQL</td><td>丢队列不丢任务，可对账重建。</td></tr>
           <tr><td>门禁判定</td><td>Server 用 <code>riskThreshold</code> 重算 <code>pass</code></td><td>引擎阈值固定 50，业务阈值可配置。</td></tr>
           <tr><td>鉴权</td><td>后置、开关化</td><td><code>security.enabled=false</code>，接口/数据模型已预留。</td></tr>
         </tbody>
@@ -337,33 +337,33 @@ stateDiagram-v2
 sequenceDiagram
     participant C as 调用方
     participant S as SkillDetectServer
-    participant PG as PostgreSQL
+    participant DB as MySQL
     participant R as Redis
     participant E as Engine
     participant L as LLM网关(可选)
 
     C->>S: POST /scans (multipart zip + useLlm + riskThreshold + baselineId?)
     S->>S: 校验大小/sha256/落盘 /data/&lt;taskNo&gt;/input.zip
-    S->>PG: insert scan_task(QUEUED)
+    S->>DB: insert scan_task(QUEUED)
     S->>R: LPUSH skillscan:queue &lt;taskNo&gt;
     S-->>C: 202 {taskId}
 
     loop dispatcher（max-active=8 个 worker）
         R-->>S: BRPOP &lt;taskNo&gt;
-        S->>PG: 原子抢占 QUEUED→RUNNING
+        S->>DB: 原子抢占 QUEUED→RUNNING
         S->>E: POST /v1/scan {path,use_llm,output_format,baseline?}
         E->>L: LLM 语义分析（useLlm=true 时）
         E-->>S: verdict + report
-        S->>PG: 写结果 + findings + 门禁判定
+        S->>DB: 写结果 + findings + 门禁判定
         S->>S: 写报告文件（json/markdown/sarif）
     end
       </pre>
 
-      <h3>4.4 数据模型（PostgreSQL，事实来源）</h3>
+      <h3>4.4 数据模型（MySQL，事实来源）</h3>
       <table>
         <thead><tr><th>表</th><th>用途</th></tr></thead>
         <tbody>
-          <tr><td><code>scan_task</code></td><td>任务主表：状态机、结论摘要、报告路径、<code>metadata</code> JSONB、<code>baseline_id</code>、<code>created_by</code>。</td></tr>
+          <tr><td><code>scan_task</code></td><td>任务主表：状态机、结论摘要、报告路径、<code>metadata</code> JSON、<code>baseline_id</code>、<code>created_by</code>。</td></tr>
           <tr><td><code>scan_finding</code></td><td>发现项：<code>task_id</code>、<code>rule_id</code>、severity、位置、说明、指纹、<code>source_url</code> 等。</td></tr>
           <tr><td><code>scan_baseline</code></td><td>基线（YAML/JSON 内容，误报抑制）。</td></tr>
           <tr><td><code>api_credential</code></td><td>预留：M2M API Key（仅存哈希）。</td></tr>
@@ -441,7 +441,7 @@ sequenceDiagram
       <pre><code># 1. 配置 LLM（可选）
 cp .env.example .env   # 然后填写网关配置
 
-# 2. 构建并启动全部服务（server / engine / postgres / redis）
+# 2. 构建并启动全部服务（server / engine / mysql / redis）
 docker compose up --build -d
 
 # 3. 查看状态
@@ -485,7 +485,7 @@ curl http://localhost:8080/api/m2m/v1/scans/&lt;taskId&gt;/report/sarif</code></
         <div class="card">
           <h4>🛡 可靠性</h4>
           <ul>
-            <li><b>事实来源</b>：PostgreSQL 权威，Redis 可重建，重启对账补队列不丢任务。</li>
+            <li><b>事实来源</b>：MySQL 权威，Redis 可重建，重启对账补队列不丢任务。</li>
             <li><b>自愈</b>：启动/周期把“QUEUED 但不在队列”的任务补入队；超时 RUNNING 置 FAILED(TIMEOUT)。</li>
             <li><b>熔断</b>：引擎连续失败达阈值即开路，半开探活恢复。</li>
             <li><b>取消/重试</b>：排队中直接 LREM；运行中结果被守卫忽略；网络类错误按 retry_count&lt;3 重投。</li>
@@ -525,7 +525,7 @@ curl http://localhost:8080/api/m2m/v1/scans/&lt;taskId&gt;/report/sarif</code></
     <section id="structure">
       <h2><span class="num">8</span>项目结构</h2>
       <pre><code>.
-├── docker-compose.yml          # 一键编排 engine/server/postgres/redis + 共享卷
+├── docker-compose.yml          # 一键编排 engine/server/mysql/redis + 共享卷
 ├── .env / .env.example         # LLM 网关配置（需填写）
 ├── SkillDetectServer/          # Spring Boot 控制面
 │   ├── src/main/java/com/skilldetect/server/   # 分层源码

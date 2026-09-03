@@ -174,12 +174,12 @@
   <section class="slide">
     <div class="inner">
       <span class="kicker">系统架构</span>
-      <h2>控制面与检测引擎解耦，数据以 PostgreSQL 为事实来源</h2>
+      <h2>控制面与检测引擎解耦，数据以 MySQL 为事实来源</h2>
       <pre class="mermaid">
 flowchart LR
     FE["前端页面<br/>HMI"] --> S
     CI["流水线 / CI<br/>M2M"] --> S
-    S["SkillDetectServer<br/>Spring Boot 控制面"] --> PG[("PostgreSQL<br/>事实来源")]
+    S["SkillDetectServer<br/>Spring Boot 控制面"] --> DB[("MySQL<br/>事实来源")]
     S --> RD[("Redis<br/>任务队列")]
     S --> VOL[("共享卷 /data")]
     S -->|"POST /v1/scan"| E["skillspector-engine<br/>FastAPI 薄封装"]
@@ -295,7 +295,7 @@ curl -F "file=@/tmp/skill-test.zip" -F "useLlm=false" http://localhost:8080/api/
       <span class="kicker">可靠 · 可观测 · 安全</span>
       <h2>面向生产的设计</h2>
       <div class="grid g3" style="margin-top:24px">
-        <div class="card"><div class="icon i-green">🛡️</div><h3>可靠性</h3><p>PostgreSQL 事实来源、启动对账自愈、引擎熔断、失败重试、任务可取消、30 天留存清理。</p></div>
+        <div class="card"><div class="icon i-green">🛡️</div><h3>可靠性</h3><p>MySQL 事实来源、启动对账自愈、引擎熔断、失败重试、任务可取消、30 天留存清理。</p></div>
         <div class="card"><div class="icon i-indigo">📈</div><h3>可观测</h3><p><code>healthz / readyz / engine/health</code> 三级健康，Prometheus 队列深度指标，引擎健康历史留痕。</p></div>
         <div class="card"><div class="icon i-amber">🔐</div><h3>安全（预留）</h3><p>HMI 走 SSO/OIDC，M2M 走 API Key（仅存哈希），引擎内部 token；按开关灰度启用。</p></div>
       </div>
@@ -338,7 +338,7 @@ curl -F "file=@/tmp/skill-test.zip" -F "useLlm=false" http://localhost:8080/api/
       <div class="cloud" style="justify-content:center">
         <span class="tag">检测引擎 SkillSpector 2.9.6</span>
         <span class="tag">Apache-2.0</span>
-        <span class="tag">Spring Boot 3.3.5</span>
+        <span class="tag">Spring Boot 2.7.18 / Java 8</span>
       </div>
     </div>
     <div class="foot"><span>Skill Poisoning Detection Service</span><span>v0.1.0</span></div>

@@ -27,7 +27,7 @@
 flowchart LR
     FE[前端 HMI] --> SRV
     CI[流水线 M2M] --> SRV
-    SRV[SkillDetectServer<br/>Spring Boot] --> PG[(PostgreSQL)]
+    SRV[SkillDetectServer<br/>Spring Boot] --> DB[(MySQL)]
     SRV --> RED[(Redis)]
     SRV --> ENG[skillspector-engine<br/>FastAPI + SkillSpector]
     SRV --> VOL[(共享卷 /data)]
@@ -38,7 +38,7 @@ flowchart LR
 - 控制面：`SkillDetectServer/`，负责 API、任务编排、状态机、持久化、限流、熔断与健康检查。
 - 检测引擎：`SkillSpector/`，负责实际扫描并输出 verdict。
 - 薄封装：`skillspector-engine/`，通过 `POST /v1/scan` 对 SkillSpector 图进行同步调用。
-- 事实来源：PostgreSQL；任务队列：Redis；文件交换：共享卷 `/data`。
+- 事实来源：MySQL；任务队列：Redis；文件交换：共享卷 `/data`。
 
 ### 1.2 SkillSpector 检测流水线
 
@@ -331,7 +331,7 @@ nodes/analyzers/sandbox_dynamic_execution.py
 
 ### 3.7 部署与网络隔离
 
-当前 `docker-compose.yml` 仅包含 `engine / server / postgres / redis`，建议新增：
+当前 `docker-compose.yml` 仅包含 `engine / server / mysql / redis`，建议新增：
 
 - `sandbox-runner` 服务；
 - `sandbox-net` 隔离网络；
@@ -341,7 +341,7 @@ nodes/analyzers/sandbox_dynamic_execution.py
 
 - Engine 与 SandboxRunner 之间使用内部 API，建议 token/mTLS；
 - 沙箱容器默认无网络，或仅允许访问受控 egress proxy；
-- 沙箱不能访问 PostgreSQL、Redis、Server 内部端口；
+- 沙箱不能访问 MySQL、Redis、Server 内部端口；
 - 宿主 `/data` 对沙箱不可见。
 
 ### 3.8 可复现性设计

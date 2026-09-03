@@ -1,6 +1,6 @@
 # Redis 任务队列契约（SkillDetectServer）
 
-Redis 仅作为**派发通道与短期状态**；PostgreSQL 是任务事实来源，Redis 数据可重建。
+Redis 仅作为**派发通道与短期状态**；MySQL 是任务事实来源，Redis 数据可重建。
 
 > 版本约定：**P0 使用 Redis List**（单消费者、实现简单）；**P1 可选升级 Redis Stream**
 > （多消费者 / 显式 ack / 自动重投）。两者对 Server 上层透明，只影响 `ScanQueueService` 内部实现。
@@ -14,7 +14,7 @@ Redis 仅作为**派发通道与短期状态**；PostgreSQL 是任务事实来�
 | `skillscan:active` (String, INCR/DECR) | 预留：全局执行并发计数（单实例用线程数即可） |
 
 > 队列元素只存 `taskNo`；`useLlm`、`riskThreshold`、`reportFormat` 等字段以 `scan_task` 为准，
-> 派发时从 PostgreSQL 读取，避免双写不一致。
+> 派发时从 MySQL 读取，避免双写不一致。
 
 ## 2. 入队 / 消费协议
 
@@ -60,7 +60,7 @@ BRPOP skillscan:queue 5        # 阻塞 5s，超时返回 null
 
 Server 启动时（`ApplicationReadyEvent`）对账：
 
-1. 查 PostgreSQL 中 `status='QUEUED'` 的任务。
+1. 查 MySQL 中 `status='QUEUED'` 的任务。
 2. 对不在 `skillscan:queue` 列表中的任务（`LRANGE` 判断成员关系），重新 `LPUSH`。
 3. 因原子抢占去重，即使偶发重复入队也不会重复执行。
 

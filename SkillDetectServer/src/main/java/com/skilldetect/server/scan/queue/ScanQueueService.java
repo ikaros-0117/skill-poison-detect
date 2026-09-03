@@ -8,7 +8,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
 /**
- * Redis List backed queue (P0). PostgreSQL remains the system of record; the
+ * Redis List backed queue (P0). MySQL remains the system of record; the
  * queue only holds taskNo strings and is rebuildable from the DB.
  *
  * P1 can swap this to a Redis Stream without changing the public methods.
