@@ -1,0 +1,55 @@
+flowchart LR
+    subgraph ENG["skillspector-engine（FastAPI 服务）"]
+        API["POST /v1/scan"]
+        MODES["scan_mode:<br/>static-only / static+llm"]
+    end
+
+    subgraph GRAPH["SkillSpector 检测图（graph.py）"]
+        RI["resolve_input"] --> BC["build_context"] --> ANALYZERS
+        ANALYZERS --> META["meta_analyzer"] --> FIN["finalize_inspection_ledger"] --> REP["report"]
+    end
+
+    subgraph ANALYZERS["26 个分析器节点（并行）"]
+        direction TB
+        subgraph STATIC["静态模式（regex 签名）"]
+            PI["prompt_injection<br/>P1-P4,P9"]
+            HC["harmful_content<br/>P5"]
+            SPL["system_prompt_leakage<br/>P6-P8"]
+            DE["data_exfiltration<br/>E1-E5"]
+            PE["privilege_escalation<br/>PE1-PE5"]
+            SC["supply_chain<br/>SC1-SC9,TR1-TR3"]
+            EA["excessive_agency<br/>EA1-EA5"]
+            OH["output_handling<br/>OH1-OH3"]
+            MP["memory_poisoning<br/>MP1-MP3"]
+            TM["tool_misuse<br/>TM1-TM4"]
+            RA["rogue_agent<br/>RA1-RA2"]
+            AS["agent_snooping<br/>AS1-AS3"]
+            AR["anti_refusal<br/>AR1-AR3"]
+            SSRF["ssrf<br/>SSRF1-SSRF3"]
+            DS["deserialization<br/>DS1-DS4"]
+        end
+        subgraph BEH["行为分析"]
+            AST["behavioral_ast<br/>AST1-AST10"]
+            TT["behavioral_taint_tracking<br/>TT1-TT6"]
+        end
+        subgraph MCP["MCP/Agent 协议"]
+            LP["mcp_least_privilege<br/>LP1-LP4"]
+            RP["mcp_rug_pull<br/>RP1-RP3"]
+            TP["mcp_tool_poisoning<br/>TP1-TP4"]
+        end
+        subgraph OTHER["其他"]
+            AI["artifact_integrity<br/>AE2-AE5"]
+            YR["static_yara<br/>YR1-YR4"]
+            SSR["structured_skill_roles<br/>SSR-1"]
+        end
+        subgraph LLM["LLM 语义（requires_api_key）"]
+            SDI["semantic_developer_intent"]
+            SQP["semantic_quality_policy"]
+            SSD["semantic_security_discovery"]
+        end
+    end
+
+    API --> MODES --> ANALYZERS
+    ANALYZERS --> META
+    META -. "LLM 过滤/富化" .-> REP
+    REP --> VERDICT["risk_score 0-100<br/>severity / recommendation / safe_to_install"]
